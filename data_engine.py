@@ -3,6 +3,7 @@ import asyncio
 import logging
 import json
 import urllib.request
+import urllib.parse  # Added for safe UXUY link character encoding
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -114,33 +115,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def connect(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Upgraded to support direct app redirection links."""
+    """Upgraded to natively support UXUY Telegram Mini App routing and Admin Monetization."""
     # Pull dynamic WalletConnect handshake query session token
     wc_session_uri = os.environ.get("WALLETCONNECT_URI", "wc:mock-handshake-payload-71c765...v2")
     
-    # Build standard browser redirection strings and mobile app deep links natively
-    universal_url = f"https://walletconnect.com/wc?uri={wc_session_uri}"
-    metamask_url = f"https://metamask.app.link/wc?uri={wc_session_uri}"
-    trust_url = f"https://link.trustwallet.com/wc?uri={wc_session_uri}"
+    # Safely URL-encode the connection string so Telegram interprets special symbols (?, &, =) properly
+    encoded_wc_uri = urllib.parse.quote(wc_session_uri)
+    
+    # 1. Your Monitored Admin Referral Activation Route
+    admin_referral_url = "https://t.me/UXUYbot/app?startapp=A_6546954770_inviteEarn"
+    
+    # 2. Native Direct Handshake Launch Route inside the UXUY Telegram App
+    uxuy_native_connect_url = f"https://t.me/UXUYbot/app?startapp=connect_{encoded_wc_uri}"
 
     keyboard = [
         [
-            InlineKeyboardButton("🦊 Launch MetaMask", url=metamask_url),
-            InlineKeyboardButton("🛡️ Launch Trust Wallet", url=trust_url)
+            InlineKeyboardButton("🔥 1. Open UXUY Wallet (Claim Setup)", url=admin_referral_url)
         ],
         [
-            InlineKeyboardButton("🌐 WalletConnect Universal Web Link", url=universal_url)
+            InlineKeyboardButton("⚡ 2. Connect Session Natively", url=uxuy_native_connect_url)
         ],
         [
-            InlineKeyboardButton("📝 Register Custom Public Address", callback_data="w_custom")
+            InlineKeyboardButton("📝 3. Register Custom Public Address", callback_data="w_custom")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "🔌 **Web3 World-Standard Deep-Link Bridge Framework**\n\n"
-        "Tap a professional provider gateway below. The bot will automatically trigger external deep-linking "
-        "redirection to your live application layer via WalletConnect secure session handshake paths:\n\n"
-        "💡 *Note: After approving the authentication prompt in your app, use /setaddress to sync your network balance matrix directly.*",
+        "🔌 **UXUY Native Telegram App Bridge Framework**\n\n"
+        "Your terminal is configured to route all connection nodes natively inside Telegram via UXUY Wallet:\n\n"
+        "🚀 **Step 1:** Tap to launch UXUY, initialize your account, and lock in your structural setup.\n"
+        "⚡ **Step 2:** Execute a secure cryptographic session handshake directly inside the Telegram app interface.\n\n"
+        "💡 *Note: After verifying your profile setup, use /setaddress to sync your active public tracking address matrix.*",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
@@ -253,7 +258,7 @@ async def setaddress(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_addr = context.args[0]
     SYSTEM_STATE["wallet_connected"] = True
-    SYSTEM_STATE["wallet_provider"] = "Web3 Authenticated Mobile Node"
+    SYSTEM_STATE["wallet_provider"] = "UXUY Multi-Chain Native Node"
     SYSTEM_STATE["wallet_address"] = user_addr
     
     if WEB3_AVAILABLE and user_addr.startswith("0x") and len(user_addr) == 42:
