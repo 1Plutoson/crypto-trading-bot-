@@ -20,7 +20,7 @@ SYSTEM_STATE = {
     "is_running": False,
     "manual_sl": 5.0,           # Customizable user stop loss %
     "auto_sl": 45.0,            # Hardcoded max safety emergency threshold
-    "active_positions": []      # Simulating active trade allocations
+    "active_positions": []      # Active trade allocations
 }
 
 crypto_prices = {"BTCUSDT": 0.0, "ETHUSDT": 0.0, "SOLUSDT": 0.0, "BNBUSDT": 0.0}
@@ -47,13 +47,8 @@ async def auto_trade_engine():
     """Automated execution loop running multiple trades on perfect entries"""
     while True:
         if SYSTEM_STATE["is_running"]:
-            # Logic scales dynamically depending on chosen balance mode
-            current_balance = SYSTEM_STATE["demo_balance"] if SYSTEM_STATE["mode"] == "DEMO" else SYSTEM_STATE["real_balance"]
-            
-            # Simulated Technical Entry scan execution loop
             for symbol, price in crypto_prices.items():
                 if price > 0.0 and len(SYSTEM_STATE["active_positions"]) < 3:
-                    # Allocate standard position chunk size
                     trade_allocation = 1000.0 
                     SYSTEM_STATE["active_positions"].append({
                         "symbol": symbol,
@@ -62,48 +57,40 @@ async def auto_trade_engine():
                         "allocation": trade_allocation,
                         "pnl_percent": 0.0
                     })
-                    logging.info(f"⚡ [Execution Engine] Entry criteria matched. Position filled for {symbol} at ${price}")
+                    logging.info(f"⚡ [Execution Engine] Entry matched. Position filled for {symbol} at ${price}")
 
-            # Risk Management Module evaluating open entry sheets
             for pos in list(SYSTEM_STATE["active_positions"]):
                 live_price = crypto_prices.get(pos["symbol"], pos["entry_price"])
                 pnl = ((live_price - pos["entry_price"]) / pos["entry_price"]) * 100
                 pos["current_price"] = live_price
                 pos["pnl_percent"] = pnl
 
-                # Auto Emergency System Check [📉 45%]
                 if pnl <= -SYSTEM_STATE["auto_sl"]:
                     SYSTEM_STATE["active_positions"].remove(pos)
-                    loss_amount = trade_allocation * (SYSTEM_STATE["auto_sl"] / 100)
                     if SYSTEM_STATE["mode"] == "DEMO":
-                        SYSTEM_STATE["demo_balance"] -= loss_amount
+                        SYSTEM_STATE["demo_balance"] -= (trade_allocation * 0.45)
                     logging.warning(f"🚨 [CRITICAL RISK] Hard Stop Triggered! 45% Auto SL liquidated {pos['symbol']}.")
 
-                # Manual Customizable Stop Loss Check
                 elif pnl <= -SYSTEM_STATE["manual_sl"]:
                     SYSTEM_STATE["active_positions"].remove(pos)
-                    loss_amount = trade_allocation * (SYSTEM_STATE["manual_sl"] / 100)
                     if SYSTEM_STATE["mode"] == "DEMO":
-                        SYSTEM_STATE["demo_balance"] -= loss_amount
-                    logging.info(f"📉 [Risk Control] Customizable Manual SL reached. Closed out {pos['symbol']}.")
+                        SYSTEM_STATE["demo_balance"] -= (trade_allocation * (SYSTEM_STATE["manual_sl"] / 100))
+                    logging.info(f"📉 [Risk Control] Manual SL reached. Closed {pos['symbol']}.")
                     
-                # Take Profit Optimization target closure (Example: 2.5% take profit target)
                 elif pnl >= 2.5:
                     SYSTEM_STATE["active_positions"].remove(pos)
-                    gain_amount = trade_allocation * (2.5 / 100)
                     if SYSTEM_STATE["mode"] == "DEMO":
-                        SYSTEM_STATE["demo_balance"] += gain_amount
-                    logging.info(f"🎯 [Profit Target] Technical target reached for {pos['symbol']}. Gains locked.")
+                        SYSTEM_STATE["demo_balance"] += (trade_allocation * 0.025)
+                    logging.info(f"🎯 [Profit Target] Target reached for {pos['symbol']}. Gains locked.")
                     
         await asyncio.sleep(4)
 
 async def start_runtime_timer(hours: int):
-    """Monitors automated loop and signs off automatically once running time expires"""
     await asyncio.sleep(hours * 3600)
     if SYSTEM_STATE["is_running"]:
         SYSTEM_STATE["is_running"] = False
         SYSTEM_STATE["active_positions"].clear()
-        logging.info(f"⏳ Session operational clock expired ({hours}h window reached). Engine offline.")
+        logging.info(f"⏳ Session expired ({hours}h window reached). Engine offline.")
 
 # --- TELEGRAM USER INTERFACE COMMANDS ---
 
@@ -118,7 +105,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🚨 **Emergency Auto SL:** -45% [Hard Protection]\n\n"
         f"🔗 **Web3 Link Hook:** {SYSTEM_STATE['wallet_provider']} ({SYSTEM_STATE['wallet_address'][:6]}...)\n"
     )
-    
     keyboard = [
         [InlineKeyboardButton("🎛️ Configure Settings", callback_data="open_settings")],
         [InlineKeyboardButton("🏁 START EXECUTION LOOP", callback_data="start_bot"),
@@ -219,11 +205,10 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🎛️ Configure Settings", callback_data="open_settings")],
             [InlineKeyboardButton("🏁 START EXECUTION LOOP", callback_data="start_bot"),
              InlineKeyboardButton("🛑 EMERGENCY PANIC STOP", callback_data="panic_stop")]
-        ]
+    ]
         await query.edit_message_text(msg, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
 
 async def handle_text_inputs(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Processes user text input configurations for customized stop loss limits and wallet strings"""
     user_text = update.message.text.strip()
     
     if context.user_data.get("awaiting_sl"):
@@ -244,30 +229,26 @@ async def handle_text_inputs(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"Linked Key: `{user_text}`"
         )
 
+async def post_init(application: Application) -> None:
+    """Safely kicks off background engine tasks only AFTER the main loop is stable"""
+    asyncio.create_task(fetch_global_market_data())
+    asyncio.create_task(auto_trade_engine())
+    logging.info("🚀 Background engines loaded securely into the active event loop.")
+
 def main():
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
-        print("CRITICAL: Environment variable token not found.")
+        logging.error("CRITICAL: Environment variable token not found.")
         return
 
-    app = Application.builder().token(token).build()
+    # Use native post_init setting to attach background tasks safely
+    app = Application.builder().token(token).post_init(post_init).build()
 
-    # Link Interaction Routing Matrix
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(menu_callback))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_inputs))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text_inputs))
 
-    # Activate parallel runtime engine threads
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-    loop.create_task(fetch_global_market_data())
-    loop.create_task(auto_trade_engine())
-
-    print("🚀 All advanced parameters mapped seamlessly. Terminal boot sequence complete.")
+    logging.info("Bot configuration finalized. Commencing loop activation...")
     app.run_polling()
 
 if __name__ == "__main__":
