@@ -79,15 +79,15 @@
 
         <!-- Action Buttons Matrix -->
         <div class="grid grid-cols-3 gap-3">
-            <button class="bg-nexaGreenDim border border-nexaGreen/30 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-nexaGreen/20 transition">
+            <button id="deposit-btn" class="bg-nexaGreenDim border border-nexaGreen/30 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-nexaGreen/20 active:scale-95 transition-all">
                 <i class="fa-solid fa-wallet text-nexaGreen text-xl"></i>
                 <span class="text-nexaGreen font-bold text-sm">Deposit</span>
             </button>
-            <button class="bg-nexaCard border border-gray-800 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-800 transition">
+            <button id="withdraw-btn" class="bg-nexaCard border border-gray-800 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-800 active:scale-95 transition-all">
                 <i class="fa-solid fa-arrow-down text-gray-300 text-xl"></i>
                 <span class="text-gray-300 font-bold text-sm">Withdraw</span>
             </button>
-            <button class="bg-nexaCard border border-gray-800 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-800 transition">
+            <button id="trade-btn" class="bg-nexaCard border border-gray-800 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-800 active:scale-95 transition-all">
                 <i class="fa-solid fa-chart-line text-gray-300 text-xl"></i>
                 <span class="text-gray-300 font-bold text-sm">Trade</span>
             </button>
@@ -132,15 +132,39 @@
 
     </div>
 
-    <!-- Init Telegram WebApp API -->
+    <!-- Init Telegram WebApp API Engine & Action Listeners -->
     <script>
-        // Expands the web app to full screen height inside Telegram
+        // 1. Setup viewport variables
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
         
-        // Tells Telegram the background color so the header matches
         window.Telegram.WebApp.setHeaderColor('#0d1117');
         window.Telegram.WebApp.setBackgroundColor('#0d1117');
+
+        // 2. Data transmission protocol
+        function sendActionToBackend(actionName) {
+            const payload = {
+                action: actionName,
+                timestamp: new Date().getTime(),
+                client: "LENS_Mobile_Terminal"
+            };
+            
+            // Fires data package directly to Python's web_app_data_handler listener
+            window.Telegram.WebApp.sendData(JSON.stringify(payload));
+        }
+
+        // 3. Event bindings for interactive matrix buttons
+        document.getElementById('deposit-btn').addEventListener('click', () => {
+            sendActionToBackend('deposit');
+        });
+
+        document.getElementById('withdraw-btn').addEventListener('click', () => {
+            sendActionToBackend('withdraw');
+        });
+
+        document.getElementById('trade-btn').addEventListener('click', () => {
+            sendActionToBackend('trade');
+        });
     </script>
 </body>
 </html>
