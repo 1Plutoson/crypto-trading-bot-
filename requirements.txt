@@ -2,3 +2,6 @@ websockets
 pandas
 requests
 python-telegram-bot
+web3
+cryptography
+eth-account
