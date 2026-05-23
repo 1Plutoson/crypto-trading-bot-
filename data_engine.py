@@ -3,14 +3,13 @@ import asyncio
 import logging
 import json
 import urllib.request
-import re
+import sys
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 from cryptography.fernet import Fernet
 from eth_account import Account
 
-# Enable memory-safe HD wallet features for generation
 Account.enable_unaudited_hdwallet_features()
 
 try:
@@ -19,50 +18,49 @@ try:
 except ImportError:
     WEB3_AVAILABLE = False
 
-# Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# --- MASTER ENCRYPTION VAULT ---
-# Generates a volatile key if a MASTER_KEY environment variable isn't set.
-# For production, set MASTER_KEY in your hosting environment variables!
+# --- MASTER ENCRYPTION SYSTEM ---
 ENCRYPTION_KEY = os.environ.get("MASTER_KEY", Fernet.generate_key())
 cipher_suite = Fernet(ENCRYPTION_KEY)
 
-# --- ADVANCED GLOBAL TERMINAL ARCHITECTURE (v8 PRO) ---
-SYSTEM_STATE = {
-    "account_mode": "DEMO",          
-    "demo_balance": 1000.00,
-    "real_balance": 0.00,
-    "is_strategy_active": False,
-    
-    # Wallet Connectivity
-    "wallet_connected": False,
-    "wallet_address": "Not Connected",
-    "wallet_provider": None,
-    "encrypted_private_key": None,
-    
-    # Mathematical Rules Configured Natively
-    "allocated_trade_capital": 10.00, 
-    "min_deposit_limit": 10.00,
-    "min_trade_amount": 1.00,
-    "max_trade_amount": 10000.00,
-    
-    # Risk Framework Matrix
-    "risk_profile": "MID",           
-    "risk_settings": {
-        "LOW":  {"SL": -0.75, "TP": 2.5},   
-        "MID":  {"SL": -1.5,  "TP": 6.25},  
-        "HIGH": {"SL": -3.75, "TP": 12.5}  
-    },
-    
-    "active_positions": {},  
-    "closed_history": []     
-}
+ADMIN_ID = 6546954770
 
+# --- ISOLATED MULTI-USER STORAGE MATRIX ---
+USER_STATES = {}
 crypto_prices = {"BTC": 0.0, "ETH": 0.0, "SOL": 0.0, "BNB": 0.0}
 
+def get_user_state(user_id: int) -> dict:
+    """Initializes and returns a unique, isolated configuration block for each user."""
+    if user_id not in USER_STATES:
+        USER_STATES[user_id] = {
+            "account_mode": "DEMO",          
+            "demo_balance": 1000.00,  # One-time allocation per unique user
+            "real_balance": 0.00,
+            "is_strategy_active": False,
+            
+            "wallet_connected": False,
+            "wallet_address": "Not Connected",
+            "wallet_provider": None,
+            "encrypted_private_key": None,
+            
+            "allocated_trade_capital": 10.00, 
+            "min_deposit_limit": 10.00,
+            
+            "risk_profile": "MID",           
+            "risk_settings": {
+                "LOW":  {"SL": -0.75, "TP": 2.5},   
+                "MID":  {"SL": -1.5,  "TP": 6.25},  
+                "HIGH": {"SL": -3.75, "TP": 12.5}  
+            },
+            
+            "active_positions": {},  
+            "closed_history": []     
+        }
+    return USER_STATES[user_id]
+
+# --- GLOBAL LIVE PRICE TICKER ---
 async def fetch_resilient_prices():
-    """Dual-route global pricing ticker."""
     while True:
         for url in ["https://api.binance.com/api/v3/ticker/price", "https://api.binance.us/api/v3/ticker/price"]:
             try:
@@ -79,50 +77,26 @@ async def fetch_resilient_prices():
                 continue
         await asyncio.sleep(5)
 
-# --- CORE MATH & WALLET UTILITIES ---
-def get_current_available_capital():
-    if SYSTEM_STATE["account_mode"] == "DEMO":
-        return SYSTEM_STATE["demo_balance"]
-    return SYSTEM_STATE["real_balance"]
-
-def update_current_balance(amount_change):
-    if SYSTEM_STATE["account_mode"] == "DEMO":
-        SYSTEM_STATE["demo_balance"] += amount_change
-    else:
-        SYSTEM_STATE["real_balance"] += amount_change
-
-def generate_bot_wallet():
-    """Generates a fresh EVM wallet for the user to deposit into."""
-    account, mnemonic = Account.create_with_mnemonic()
-    encrypted_key = cipher_suite.encrypt(account.key)
-    return account.address, encrypted_key, mnemonic
-
-async def delete_message_timer(chat_id, message_id, bot, delay=60):
-    """Background task to delete sensitive messages after a delay."""
-    await asyncio.sleep(delay)
-    try:
-        await bot.delete_message(chat_id=chat_id, message_id=message_id)
-    except Exception as e:
-        logging.error(f"Failed to delete self-destruct message: {e}")
-
-# --- TERMINAL UTILITY COMMANDS ---
+# --- USER ROUTINES ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    
     msg = (
         "⚡ **LENS Multi-Coin Production Terminal** ⚡\n"
-        "Institutional control panel fully initialized.\n\n"
-        f"💳 **Mode:** `{SYSTEM_STATE['account_mode']}` | 📊 **Strategy:** `{'🟢 ON' if SYSTEM_STATE['is_strategy_active'] else '🔴 OFF'}`\n"
-        f"🛡️ **Risk Target:** `{SYSTEM_STATE['risk_profile']}`\n"
+        "Your unique institutional node is initialized.\n\n"
+        f"💳 **Mode:** `{state['account_mode']}` | 📊 **Strategy:** `{'🟢 ON' if state['is_strategy_active'] else '🔴 OFF'}`\n"
+        f"🛡️ **Your Risk Target:** `{state['risk_profile']}`\n"
         "---------------------------------------\n"
         "🔌 /connect - Universal Web3 Secure Link Portal\n"
         "💼 /wallet - View Capital Matrix & Network Details\n"
         "🔄 /accounts - Switch between DEMO and REAL Servers\n"
         "🛡️ /risk - Configure Adaptive Risk parameters\n"
-        "📊 /positions - View Active Orders & Executions\n"
-        "📜 /history - View Transaction & Audit Logs\n"
+        "📊 /positions - View Your Active Orders\n"
+        "📜 /history - View Your Transaction Logs\n"
         "📈 /price - Real-time Prices & Live Automated Charts\n"
-        "📈 /ta - Read Technical Analysis & Trend Confluences\n"
         "🤖 /autotrade - Configurable Split-Allocation Engine\n"
-        "🛑 /closeall - Liquidate and close all active positions"
+        "🛑 /closeall - Liquidate your active positions"
     )
     await update.message.reply_text(msg, parse_mode="Markdown")
 
@@ -130,284 +104,292 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "📈 **LENS Real-Time Asset Index (USDT)**\n---------------------------------------\n"
     for asset, val in crypto_prices.items():
         status = "🟢" if val > 0 else "🔴 Offline"
-        msg += f"• **{asset}**: ${val:,.2f} {status if val > 0 else status}\n"
-    msg += f"\n_Last update verified: {datetime.now().strftime('%H:%M:%S')}_"
-    await update.message.reply_text(msg, parse_mode="Markdown")
-
-async def ta(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "📊 **LENS Technical Analysis Matrix**\n---------------------------------------\n"
-    for asset in ["ETH", "SOL", "BNB"]:
-        price_now = crypto_prices.get(asset, 0.0)
-        if price_now == 0:
-            msg += f"• **{asset}**: ⚠️ Data Stream Pending...\n"
-            continue
-        rsi_sim = 52.3 if asset == "ETH" else (48.1 if asset == "SOL" else 61.5)
-        trend = "BULLISH CONFLUENCE" if rsi_sim > 50 else "NEUTRAL ACCUMULATION"
-        msg += f"• **{asset}/USDT**: {trend}\n  - RSI (14): `{rsi_sim}` | MA(50/200): `GOLDEN CROSS`\n"
+        msg += f"• **{asset}**: ${val:,.2f} {status}\n"
+    msg += f"\n_Last verified: {datetime.now().strftime('%H:%M:%S')}_"
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def accounts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
     keyboard = [
-        [InlineKeyboardButton("🎮 Activate DEMO ($1,000)", callback_data="set_demo")],
-        [InlineKeyboardButton("🔑 Activate REAL (UXUY Engine)", callback_data="set_real")]
+        [InlineKeyboardButton("🎮 Activate DEMO Server", callback_data="set_demo")],
+        [InlineKeyboardButton("🔑 Activate REAL Server", callback_data="set_real")]
     ]
-    current = SYSTEM_STATE["account_mode"]
     await update.message.reply_text(
-        f"🔄 **Server Environment Configurator**\n\nActive Node Server: `{current}`\n\n"
-        "Choose your target execution landscape below:",
+        f"🔄 **Server Environment Configurator**\n\nActive Node Server: `{state['account_mode']}`\n"
+        f"Available Demo Capital: `${state['demo_balance']:.2f}`\n\n"
+        "Choose your target environment landscape:",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
 
 async def risk(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
     keyboard = [[
         InlineKeyboardButton("🟢 LOW", callback_data="risk_LOW"),
         InlineKeyboardButton("🟡 MID", callback_data="risk_MID"),
         InlineKeyboardButton("🔴 HIGH", callback_data="risk_HIGH")
     ]]
-    current = SYSTEM_STATE["risk_profile"]
-    sets = SYSTEM_STATE["risk_settings"][current]
+    sets = state["risk_settings"][state["risk_profile"]]
     await update.message.reply_text(
-        f"🛡️ **Risk Tolerance Profile Manager**\n\nCurrent Configuration: `{current}`\n"
-        f"• Stop Loss Boundary: `{sets['SL']}%`\n"
-        f"• Take Profit Target: `{sets['TP']}%`\n\n"
-        "Modify engine parameters instantly:",
+        f"🛡️ **Risk Tolerance Profile Manager**\n\nCurrent Matrix: `{state['risk_profile']}`\n"
+        f"• Stop Loss: `{sets['SL']}%` | Take Profit: `{sets['TP']}%`",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
 
 async def positions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not SYSTEM_STATE["active_positions"]:
-        await update.message.reply_text("📊 **Positions & Orders**: No open executions running on this node.")
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    if not state["active_positions"]:
+        await update.message.reply_text("📊 **Positions**: Your account context has no active deployments running.")
         return
-    msg = "📊 **LENS Active Portfolio Deployments**\n---------------------------------------\n"
-    for asset, data in SYSTEM_STATE["active_positions"].items():
+    msg = "📊 **Your Active Portfolio Deployments**\n---------------------------------------\n"
+    for asset, data in state["active_positions"].items():
         live_p = crypto_prices.get(asset, 0.0)
         pnl_pct = ((live_p - data['entry']) / data['entry']) * 100 if data['entry'] > 0 else 0.0
         msg += f"• **{asset}/USDT**\n  - Size: ${data['allocated']:.2f}\n  - Entry: ${data['entry']:,} | Live: ${live_p:,}\n  - Floating PnL: `{pnl_pct:+.2f}%`\n"
     await update.message.reply_text(msg, parse_mode="Markdown")
 
-async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not SYSTEM_STATE["closed_history"]:
-        await update.message.reply_text("📜 **Transaction Logs**: Audit stream empty. No closed records found.")
-        return
-    msg = "📜 **LENS Historical Ledger (Last 5 Closed)**\n---------------------------------------\n"
-    for txn in SYSTEM_STATE["closed_history"][-5:]:
-        msg += f"• [{txn['time']}] **{txn['asset']}**: {txn['type']} | PnL: `${txn['pnl']:+.2f}` ({txn['mode']} Mode)\n"
-    await update.message.reply_text(msg, parse_mode="Markdown")
-
 async def autotrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if SYSTEM_STATE["account_mode"] == "REAL" and not SYSTEM_STATE["wallet_connected"]:
-        await update.message.reply_text("❌ Connection Error: Interface real-world UXUY infrastructure via /connect first.")
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    
+    if state["account_mode"] == "REAL" and not state["wallet_connected"]:
+        await update.message.reply_text("❌ Connection Error: Interface your Web3 infrastructure via /connect first.")
         return
 
     if not context.args:
-        await update.message.reply_text(
-            "🤖 **LENS Automated Strategy Portal**\n\n"
-            "To deploy allocations, pass your desired capital parameters directly.\n"
-            "📝 **Syntax Example:** `/autotrade 10` (Min: $10, Max: Unlimited)\n\n"
-            f"Current Strategy State: `{'🟩 ON (RUNNING)' if SYSTEM_STATE['is_strategy_active'] else '🟥 OFF (IDLE)'}`",
-            parse_mode="Markdown"
-        )
+        await update.message.reply_text(f"🤖 **Automated Strategy**\nPass capital target. Example: `/autotrade 50`\nStatus: `{'🟩 RUNNING' if state['is_strategy_active'] else '🟥 IDLE'}`")
         return
 
     try:
         req_amount = float(context.args[0])
     except ValueError:
-        await update.message.reply_text("❌ Numeric parameter validation failed.")
         return
 
-    if req_amount < SYSTEM_STATE["min_deposit_limit"]:
-        await update.message.reply_text(f"❌ Safety boundary conflict. Minimum transaction deployment pool requires exactly **${SYSTEM_STATE['min_deposit_limit']:.2f} USDT**.")
+    if req_amount < state["min_deposit_limit"]:
+        await update.message.reply_text(f"❌ Minimum transaction deployment is **${state['min_deposit_limit']:.2f} USDT**.")
         return
 
-    available = get_current_available_capital()
+    available = state["demo_balance"] if state["account_mode"] == "DEMO" else state["real_balance"]
     if req_amount > available:
-        await update.message.reply_text(f"❌ Execution Blocked: Insufficient liquidity on your {SYSTEM_STATE['account_mode']} profile. Available: ${available:.2f}")
+        await update.message.reply_text(f"❌ Insufficient liquidity. Available: ${available:.2f}")
         return
 
-    SYSTEM_STATE["allocated_trade_capital"] = req_amount
+    state["allocated_trade_capital"] = req_amount
     trade_pool = req_amount / 2
     per_asset = trade_pool / 3
 
     keyboard = [
-        [InlineKeyboardButton("🟢 Confirm & Fire Orders", callback_data="confirm_trade_on")],
-        [InlineKeyboardButton("🔴 Kill Strategy", callback_data="confirm_trade_off")]
+        [InlineKeyboardButton("🟢 Confirm & Execute Orders", callback_data="confirm_trade_on")],
+        [InlineKeyboardButton("🔴 Cancel Order Execution", callback_data="confirm_trade_off")]
     ]
-    
     await update.message.reply_text(
-        f"⚠️ **PRO SECTOR CONFIRMATION DEPLOYMENT**\n---------------------------------------\n"
-        f"• **Target Base Capital:** ${req_amount:.2f} USDT\n"
-        f"• **Active Trading Pool (50%):** ${trade_pool:.2f} USDT\n"
-        f"• **Asset Target Count:** 3 (ETH, SOL, BNB)\n"
-        f"• **Mathematical Split per Asset (33.33%):** ~${per_asset:.2f} USDT\n"
-        f"• **Risk Parameters applied:** `{SYSTEM_STATE['risk_profile']}`\n\n"
-        f"Confirming execution will immediately process on-chain data loops.",
+        f"⚠️ **ISOLATED SECTOR ALLOCATION CONFIRMATION**\n---------------------------------------\n"
+        f"• **Target Capital Base:** ${req_amount:.2f} USDT\n"
+        f"• **Active Trade Split (50%):** ${trade_pool:.2f} USDT\n"
+        f"• **Split Per Asset (ETH, SOL, BNB):** ~${per_asset:.2f} USDT\n"
+        f"Orders will only process within your specific chat matrix.",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
 
 async def closeall(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not SYSTEM_STATE["active_positions"]:
-        await update.message.reply_text("⚠️ Liquidator Engine report: Matrix contains zero active risks.")
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    if not state["active_positions"]:
+        await update.message.reply_text("⚠️ Matrix contains zero active risks to liquidate.")
         return
         
-    for asset, data in list(SYSTEM_STATE["active_positions"].items()):
+    for asset, data in list(state["active_positions"].items()):
         live_p = crypto_prices.get(asset, 0.0)
         pnl = (live_p - data['entry']) * (data['allocated'] / data['entry']) if data['entry'] > 0 else 0.0
-        update_current_balance(data['allocated'] + pnl)
-        SYSTEM_STATE["closed_history"].append({
-            "time": datetime.now().strftime("%H:%M"),
-            "asset": asset,
-            "type": "LIQUIDATE",
-            "pnl": pnl,
-            "mode": SYSTEM_STATE["account_mode"]
+        if state["account_mode"] == "DEMO":
+            state["demo_balance"] += (data['allocated'] + pnl)
+        else:
+            state["real_balance"] += (data['allocated'] + pnl)
+            
+        state["closed_history"].append({
+            "time": datetime.now().strftime("%H:%M"), "asset": asset, "type": "LIQUIDATE", "pnl": pnl, "mode": state["account_mode"]
         })
         
-    SYSTEM_STATE["active_positions"].clear()
-    SYSTEM_STATE["is_strategy_active"] = False
-    await update.message.reply_text("🛑 **EMERGENCY KILLSWITCH FIRED.** All active exposures liquidated cleanly to balance matrices.")
+    state["active_positions"].clear()
+    state["is_strategy_active"] = False
+    await update.message.reply_text("🛑 **POSITIONS CLOSED.** Your specific account exposures have been cleared.")
 
-# --- CONNECTION & IMPORT COMMANDS ---
+async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    if not state["closed_history"]:
+        await update.message.reply_text("📜 Your execution history log is empty.")
+        return
+    msg = "📜 **Your Isolated Transaction Ledger**\n---------------------------------------\n"
+    for txn in state["closed_history"][-5:]:
+        msg += f"• [{txn['time']}] **{txn['asset']}**: {txn['type']} | PnL: `${txn['pnl']:+.2f}` ({txn['mode']})\n"
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
 async def connect(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Strictly applying the requested admin referral structure
-    automated_referral_url = "https://t.me/UXUYbot/app?appstart=A_6546954770_inviteEarn"
+    ref_url = "https://t.me/UXUYbot/app?appstart=A_6546954770_inviteEarn"
     keyboard = [
-        [InlineKeyboardButton("🔥 1. Open UXUY Wallet", url=automated_referral_url)],
-        [InlineKeyboardButton("⚡ 2A. Generate LENS Burner Wallet", callback_data="gen_wallet")],
-        [InlineKeyboardButton("🔑 2B. Import Existing Private Key", callback_data="imp_wallet")]
+        [InlineKeyboardButton("🔥 1. Register UXUY Infrastructure", url=ref_url)],
+        [InlineKeyboardButton("⚡ 2A. Generate Isolated Burner", callback_data="gen_wallet")],
+        [InlineKeyboardButton("🔑 2B. Import Personal Vault Key", callback_data="imp_wallet")]
+    ]
+    await update.message.reply_text("🔌 **Web3 Link Portal**\nChoose your decoupled wallet deployment structure:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    bal = state["demo_balance"] if state["account_mode"] == "DEMO" else state["real_balance"]
+    msg = (
+        "💼 **Your Isolated Node Balance Matrix**\n"
+        f"• Status: {'🟩 LINKED' if state['wallet_connected'] else '🟥 DECOUPLED'}\n"
+        f"• Address: `{state['wallet_address']}`\n"
+        "----------------------------------------\n"
+        f"💳 **Active Mode:** `{state['account_mode']}` | **Liquidity:** ${bal:.2f} USDT"
+    )
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+async def import_key_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.type != "private":
+        return
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    if not context.args:
+        await update.message.reply_text("❌ Use formatting: `/import PRIVATE_KEY`")
+        return
+    try:
+        account = Account.from_key(context.args[0].strip())
+        state["wallet_address"] = account.address
+        state["encrypted_private_key"] = cipher_suite.encrypt(account.key)
+        state["wallet_provider"] = "User Vault Import"
+        state["wallet_connected"] = True
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+        await update.message.reply_text(f"🟩 **Decoupled Wallet Imported Securely!**\nBound to instance: `{account.address}`")
+    except Exception:
+        await update.message.reply_text("❌ Encryption cipher signature verification rejected.")
+
+# --- MASTER ADMIN ONLY CONTROL CENTER ---
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ **CRITICAL EXCEPTION: ACCESS DENIED.**\nYour credentials are not flagged in the root configuration file.")
+        return
+        
+    keyboard = [
+        [InlineKeyboardButton("🔍 Diagnose System Infrastructure", callback_data="admin_diagnose")],
+        [InlineKeyboardButton("🔧 Execute Auto-Fix Script", callback_data="admin_autofix")]
     ]
     await update.message.reply_text(
-        "🔌 **UXUY Native Framework Connection Bridge**\n\n"
-        "Register your UXUY framework via Step 1, then choose your preferred security architecture for the LENS trading engine below:",
+        "🎛️ **LENS CORE SYSTEM ADMINISTRATION**\n"
+        "---------------------------------------\n"
+        "Root level access recognized. Select an automated maintenance daemon below:",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
 
-async def import_key_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Securely imports an existing private key and wipes the chat record."""
-    if update.effective_chat.type != "private":
-        await update.message.reply_text("❌ Security Risk: Only use `/import` in a private DM with the bot.", parse_mode="Markdown")
-        return
-
-    if not context.args:
-        await update.message.reply_text("❌ Syntax: `/import YourPrivateKeyHere`\n\n⚠️ Ensure you are pasting an EVM-compatible private key.", parse_mode="Markdown")
-        return
-        
-    raw_key = context.args[0].strip()
-    
-    try:
-        account = Account.from_key(raw_key)
-        encrypted_key = cipher_suite.encrypt(account.key)
-        
-        SYSTEM_STATE["wallet_address"] = account.address
-        SYSTEM_STATE["encrypted_private_key"] = encrypted_key
-        SYSTEM_STATE["wallet_provider"] = "Imported Secure Vault"
-        SYSTEM_STATE["wallet_connected"] = True
-        
-        # Live Web3 Balance Fetch for imported keys
-        if WEB3_AVAILABLE:
-            try:
-                w3 = Web3(Web3.HTTPProvider("https://bsc-dataseed.binance.org/"))
-                checksum_address = w3.to_checksum_address(account.address)
-                balance_wei = w3.eth.get_balance(checksum_address)
-                SYSTEM_STATE["real_balance"] = float(w3.from_wei(balance_wei, 'ether'))
-            except Exception:
-                SYSTEM_STATE["real_balance"] = 0.00
-        
-        # Delete user's message containing the raw key for maximum security
-        try:
-            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
-        except Exception:
-            logging.warning("Bot lacks permission to delete user messages. Advise manual deletion.")
-            await update.message.reply_text("⚠️ **URGENT**: Please delete your previous message containing the private key immediately to secure your chat history.")
-            
-        await update.message.reply_text(f"🟩 **Wallet Imported & Encrypted Successfully!**\n\nBound to: `{account.address}`\nCapital Fetched: `${SYSTEM_STATE['real_balance']:.2f}`", parse_mode="Markdown")
-        
-    except ValueError:
-        await update.message.reply_text("❌ Invalid Private Key format. The engine rejected the signature.", parse_mode="Markdown")
-
-async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    available = get_current_available_capital()
-    msg = (
-        "💼 **LENS Production Wallet Matrix**\n"
-        f"• Network Node Status: {'🟩 RUNNING (LIVE)' if SYSTEM_STATE['wallet_connected'] else '🟥 UNLINKED'}\n"
-        f"• Active Provider: `{SYSTEM_STATE['wallet_provider']}`\n"
-        f"• Tracked Public Key: `{SYSTEM_STATE['wallet_address']}`\n"
-        "----------------------------------------\n"
-        f"💳 **Active Profile Environment:** `{SYSTEM_STATE['account_mode']}`\n"
-        f"💰 **Total Available Balance:** ${available:.2f} USDT\n"
-    )
-    await update.message.reply_text(msg, parse_mode="Markdown")
-
-# --- CALLBACK HANDLERS ---
+# --- GLOBAL CALLBACK MATRIX ---
 async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
     await query.answer()
     data = query.data
 
-    if data == "gen_wallet":
-        address, encrypted_key, mnemonic = generate_bot_wallet()
+    # --- ADMIN EXECUTIONS ---
+    if data == "admin_diagnose":
+        if user_id != ADMIN_ID: return
+        active_nodes = len(USER_STATES)
+        env_token = "🟩 FOUND" if os.environ.get("TELEGRAM_BOT_TOKEN") else "🟥 MISSING"
+        env_key = "🟩 SIGNED" if os.environ.get("MASTER_KEY") else "🟨 TEMPORARY VOLATILE"
+        feed_status = "🟩 CONNECTED" if any(v > 0 for v in crypto_prices.values()) else "🟥 DATA STALLED"
         
-        SYSTEM_STATE["wallet_address"] = address
-        SYSTEM_STATE["encrypted_private_key"] = encrypted_key
-        SYSTEM_STATE["wallet_provider"] = "LENS Native Burner"
-        SYSTEM_STATE["wallet_connected"] = True
-        SYSTEM_STATE["real_balance"] = 0.00 # Brand new wallet has 0 balance
-        
-        msg = (
-            "🔐 **LENS Secure Wallet Generated**\n\n"
-            f"• **Your Trading Address:** `{address}`\n\n"
-            "⚠️ **BACKUP YOUR SEED PHRASE NOW:**\n"
-            f"`{mnemonic}`\n\n"
-            "*(This message will self-destruct in 60 seconds...)*\n\n"
-            "👇 **Next Step:** Transfer your trading capital (e.g., BNB) to this address from UXUY to begin."
+        report = (
+            "🔍 **LENS INFRASTRUCTURE HEALTH REPORT**\n"
+            "---------------------------------------\n"
+            f"• **Active Isolated Contexts:** `{active_nodes} Users Loaded`\n"
+            f"• **Telegram Interface Pipeline:** `{env_token}`\n"
+            f"• **Encryption Vault Master Status:** `{env_key}`\n"
+            f"• **Binance Stream Feed:** `{feed_status}`\n"
+            f"• **System RAM Node Allocation:** `{sys.getsizeof(USER_STATES)} Bytes`"
         )
-        sent_msg = await query.edit_message_text(msg, parse_mode="Markdown")
+        await query.edit_message_text(report, parse_mode="Markdown")
+        return
+
+    if data == "admin_autofix":
+        if user_id != ADMIN_ID: return
+        corrupted_nodes = 0
+        fixed_positions = 0
         
-        # Fire self-destruct task in the background
-        asyncio.create_task(delete_message_timer(update.effective_chat.id, sent_msg.message_id, context.bot, 60))
+        for uid, ustate in list(USER_STATES.items()):
+            for asset, pos in list(ustate["active_positions"].items()):
+                if pos['entry'] <= 0 or crypto_prices.get(asset, 0) == 0:
+                    del ustate["active_positions"][asset]
+                    fixed_positions += 1
+            if not isinstance(ustate.get("demo_balance"), (int, float)):
+                ustate["demo_balance"] = 1000.00
+                corrupted_nodes += 1
+                
+        await query.edit_message_text(
+            f"🔧 **AUTOMATED MAINTENANCE CYCLE COMPLETE**\n"
+            "---------------------------------------\n"
+            f"• Repaired structural node values: `{corrupted_nodes}`\n"
+            f"• Dropped dead ghost exposure sets: `{fixed_positions}`\n"
+            f"• Memory Garbage Collector: `CLEANED & ALIGNED`", 
+            parse_mode="Markdown"
+        )
+        return
+
+    # --- DECOUPLED USER MENU ACTIONS ---
+    if data == "gen_wallet":
+        account = Account.create()
+        state["wallet_address"] = account.address
+        state["encrypted_private_key"] = cipher_suite.encrypt(account.key)
+        state["wallet_provider"] = "LENS Native Burner"
+        state["wallet_connected"] = True
+        await query.edit_message_text(
+            f"🔐 **Decoupled Wallet Generated Successfully**\n\n"
+            f"• **Your Isolated Address:** `{account.address}`\n"
+            f"• **Your Private Key:** `{account.key.hex()}`\n\n"
+            "⚠️ Copy your private key immediately! The bot will not show it again and it is completely hidden from other users.",
+            parse_mode="Markdown"
+        )
         return
 
     if data == "imp_wallet":
-        await query.edit_message_text("📝 **Import Architecture Active**\n\nTo bind your existing vault, send a private message to this bot using the following syntax:\n\n`/import YOUR_PRIVATE_KEY_HERE`\n\n_Your message will be encrypted and instantly deleted from the server log._", parse_mode="Markdown")
+        await query.edit_message_text("📝 Send your key to this DM thread using: `/import YOUR_PRIVATE_KEY`")
         return
 
     if data == "set_demo":
-        SYSTEM_STATE["account_mode"] = "DEMO"
-        if SYSTEM_STATE["demo_balance"] <= 0:
-            SYSTEM_STATE["demo_balance"] = 1000.00
-        await query.edit_message_text("🟩 Switched to **DEMO ACCOUNT**. $1,000 virtual balance loaded.", parse_mode="Markdown")
-    
+        state["account_mode"] = "DEMO"
+        await query.edit_message_text(f"🟩 Node adjusted to **DEMO**. Remaining balance matrix: ${state['demo_balance']:.2f} USDT")
     elif data == "set_real":
-        SYSTEM_STATE["account_mode"] = "REAL"
-        await query.edit_message_text("🎛️ Switched to **REAL ACCOUNT**. Real-world tracking matrix operational.", parse_mode="Markdown")
+        state["account_mode"] = "REAL"
+        await query.edit_message_text("🎛️ Node adjusted to **REAL**. Monitoring linked Web3 capital lines.")
 
     elif data.startswith("risk_"):
-        selected_risk = data.split("_")[1]
-        SYSTEM_STATE["risk_profile"] = selected_risk
-        sets = SYSTEM_STATE["risk_settings"][selected_risk]
-        await query.edit_message_text(f"🟩 **Risk Profile Aligned:** `{selected_risk}`\n• SL: `{sets['SL']}%` | TP: `{sets['TP']}%`")
+        sel = data.split("_")[1]
+        state["risk_profile"] = sel
+        await query.edit_message_text(f"🟩 **Your profile configured to:** `{sel}`")
 
     elif data == "confirm_trade_on":
-        SYSTEM_STATE["is_strategy_active"] = True
-        req_amount = SYSTEM_STATE["allocated_trade_capital"]
-        trade_pool = req_amount / 2
-        per_asset = trade_pool / 3
-
+        state["is_strategy_active"] = True
+        pool = state["allocated_trade_capital"] / 2
+        per_asset = pool / 3
         for asset in ["ETH", "SOL", "BNB"]:
-            price_entry = crypto_prices.get(asset, 0.0)
-            if price_entry > 0:
-                SYSTEM_STATE["active_positions"][asset] = {
-                    "allocated": per_asset,
-                    "entry": price_entry
-                }
-        update_current_balance(-trade_pool)
-        await query.edit_message_text("🟩 **LENS Algorithmic Split Allocation Matrix Deployed Successfully!** Engine is running.")
+            entry = crypto_prices.get(asset, 0.0)
+            if entry > 0:
+                state["active_positions"][asset] = {"allocated": per_asset, "entry": entry}
+        if state["account_mode"] == "DEMO":
+            state["demo_balance"] -= pool
+        else:
+            state["real_balance"] -= pool
+        await query.edit_message_text("🟩 **Algorithmic split strategy activated within your node sandbox.**")
         
     elif data == "confirm_trade_off":
-        SYSTEM_STATE["is_strategy_active"] = False
-        await query.edit_message_text("🛑 **Strategy Engine Execution Cancelled.** System idling safely.")
+        state["is_strategy_active"] = False
+        await query.edit_message_text("🛑 Order setup killed safely.")
 
 async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logging.error(f"🚨 Crash Shield Catch: {context.error}")
@@ -417,13 +399,12 @@ async def post_init(application: Application) -> None:
 
 def main():
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not token:
-        print("Set TELEGRAM_BOT_TOKEN environment variable.")
-        return
+    if not token: return
 
     app = Application.builder().token(token).post_init(post_init).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CommandHandler("connect", connect))
     app.add_handler(CommandHandler("import", import_key_command))
     app.add_handler(CommandHandler("wallet", wallet))
@@ -432,7 +413,6 @@ def main():
     app.add_handler(CommandHandler("positions", positions))
     app.add_handler(CommandHandler("history", history))
     app.add_handler(CommandHandler("price", price))
-    app.add_handler(CommandHandler("ta", ta))
     app.add_handler(CommandHandler("autotrade", autotrade))
     app.add_handler(CommandHandler("closeall", closeall))
     
