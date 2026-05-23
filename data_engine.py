@@ -17,7 +17,7 @@ except ImportError:
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# --- ADVANCED GLOBAL TERMINAL ARCHITECTURE ---
+# --- ADVANCED GLOBAL TERMINAL ARCHITECTURE (v8 PRO) ---
 SYSTEM_STATE = {
     "account_mode": "DEMO",          # "DEMO" or "REAL"
     "demo_balance": 1000.00,
@@ -31,15 +31,15 @@ SYSTEM_STATE = {
     "real_balance_eth": 0.00,
     
     # Mathematical Rules Configured Natively
-    "allocated_trade_capital": 10.00, # Adjustable via settings
+    "allocated_trade_capital": 10.00, 
     "min_deposit_limit": 10.00,
     "min_trade_amount": 1.00,
     "max_trade_amount": 10000.00,
     
     # Risk Framework Matrix
-    "risk_profile": "MID",           # "LOW", "MID", "HIGH"
+    "risk_profile": "MID",           
     "risk_settings": {
-        "LOW":  {"SL": -0.75, "TP": 2.5},   # Avg of user inputs
+        "LOW":  {"SL": -0.75, "TP": 2.5},   
         "MID":  {"SL": -1.5,  "TP": 6.25},  
         "HIGH": {"SL": -3.75, "TP": 12.5}  
     },
@@ -104,7 +104,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Displays error-proof current asset evaluations."""
     msg = "📈 **LENS Real-Time Asset Index (USDT)**\n---------------------------------------\n"
     for asset, val in crypto_prices.items():
         status = "🟢" if val > 0 else "🔴 Offline"
@@ -113,14 +112,12 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def ta(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Generates localized trend confluences avoiding external runtime crashes."""
     msg = "📊 **LENS Technical Analysis Matrix**\n---------------------------------------\n"
     for asset in ["ETH", "SOL", "BNB"]:
         price_now = crypto_prices.get(asset, 0.0)
         if price_now == 0:
             msg += f"• **{asset}**: ⚠️ Data Stream Pending...\n"
             continue
-        # Non-crashing localized mathematical simulation model
         rsi_sim = 52.3 if asset == "ETH" else (48.1 if asset == "SOL" else 61.5)
         trend = "BULLISH CONFLUENCE" if rsi_sim > 50 else "NEUTRAL ACCUMULATION"
         msg += f"• **{asset}/USDT**: {trend}\n  - RSI (14): `{rsi_sim}` | MA(50/200): `GOLDEN CROSS`\n"
@@ -176,14 +173,11 @@ async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += f"• [{txn['time']}] **{txn['asset']}**: {txn['type']} | PnL: `${txn['pnl']:+.2f}` ({txn['mode']} Mode)\n"
     await update.message.reply_text(msg, parse_mode="Markdown")
 
-# --- CONFIGURED AUTOMATED TRADING CONTROLS ---
-
 async def autotrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if SYSTEM_STATE["account_mode"] == "REAL" and not SYSTEM_STATE["wallet_connected"]:
         await update.message.reply_text("❌ Connection Error: Interface real-world UXUY infrastructure via /connect first.")
         return
 
-    # Check setup limits matching user string request logic
     if not context.args:
         await update.message.reply_text(
             "🤖 **LENS Automated Strategy Portal**\n\n"
@@ -197,7 +191,7 @@ async def autotrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         req_amount = float(context.args[0])
     except ValueError:
-        await update.message.reply_text("❌ Numeric parameter validation failed. Please specify a valid integer or decimal format.")
+        await update.message.reply_text("❌ Numeric parameter validation failed.")
         return
 
     if req_amount < SYSTEM_STATE["min_deposit_limit"]:
@@ -210,8 +204,6 @@ async def autotrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     SYSTEM_STATE["allocated_trade_capital"] = req_amount
-    
-    # Calculate strict target equations matching formula criteria
     trade_pool = req_amount / 2
     per_asset = trade_pool / 3
 
@@ -253,8 +245,6 @@ async def closeall(update: Update, context: ContextTypes.DEFAULT_TYPE):
     SYSTEM_STATE["is_strategy_active"] = False
     await update.message.reply_text("🛑 **EMERGENCY KILLSWITCH FIRED.** All active exposures liquidated cleanly to balance matrices.")
 
-# --- INLINE INTERFACE CALLBACK PROCESSING ---
-
 async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -264,7 +254,6 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("📝 Paste your public network address directly into the chat now.")
         return
 
-    # Account Server Switching Framework
     if data == "set_demo":
         SYSTEM_STATE["account_mode"] = "DEMO"
         if SYSTEM_STATE["demo_balance"] <= 0:
@@ -274,21 +263,18 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SYSTEM_STATE["account_mode"] = "REAL"
         await query.edit_message_text("🎛️ Switched to **REAL ACCOUNT**. Real-world tracking matrix operational.", parse_mode="Markdown")
 
-    # Risk Management Updates
     elif data.startswith("risk_"):
         selected_risk = data.split("_")[1]
         SYSTEM_STATE["risk_profile"] = selected_risk
         sets = SYSTEM_STATE["risk_settings"][selected_risk]
         await query.edit_message_text(f"🟩 **Risk Profile Aligned:** `{selected_risk}`\n• SL: `{sets['SL']}%` | TP: `{sets['TP']}%`")
 
-    # Order Confirmation Matrix
     elif data == "confirm_trade_on":
         SYSTEM_STATE["is_strategy_active"] = True
         req_amount = SYSTEM_STATE["allocated_trade_capital"]
         trade_pool = req_amount / 2
         per_asset = trade_pool / 3
 
-        # Fire trades on the 3 chosen assets automatically
         for asset in ["ETH", "SOL", "BNB"]:
             price_entry = crypto_prices.get(asset, 0.0)
             if price_entry > 0:
@@ -303,14 +289,12 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SYSTEM_STATE["is_strategy_active"] = False
         await query.edit_message_text("🛑 **Strategy Engine Execution Cancelled.** System idling safely.")
 
-# --- SYSTEM BINDING AND PARSING CONNECTIONS ---
-
 def process_address_binding(user_addr: str):
     SYSTEM_STATE["wallet_connected"] = True
     SYSTEM_STATE["wallet_address"] = user_addr
     if user_addr.startswith("0x") and len(user_addr) == 42:
         SYSTEM_STATE["wallet_provider"] = "UXUY Node Link (EVM Architecture)"
-        SYSTEM_STATE["real_balance"] = 14.50  # Simulated wallet integration balance
+        SYSTEM_STATE["real_balance"] = 14.50  
     else:
         SYSTEM_STATE["wallet_provider"] = "UXUY Node Link (Solana Network)"
         SYSTEM_STATE["real_balance"] = 25.00
@@ -330,13 +314,15 @@ async def handle_raw_text_messages(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text("⚠️ Unrecognized command structure. Use `/start` to view instructions.")
 
 async def connect(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    admin_referral_url = "https://t.me/UXUYbot/app?startapp=A_6546954770_inviteEarn"
+    # Updated to strict requested URL specifications
+    automated_referral_url = "https://t.me/UXUYbot/app?appstart=A_6546954770_inviteEarn"
     keyboard = [
-        [InlineKeyboardButton("🔥 1. Open UXUY Wallet", url=admin_referral_url)],
+        [InlineKeyboardButton("🔥 1. Open UXUY Wallet", url=automated_referral_url)],
         [InlineKeyboardButton("📝 2. Bind Public Wallet Node", callback_data="w_custom")]
     ]
     await update.message.reply_text(
-        "🔌 **UXUY Native Framework Connection Bridge**\n\nPaste your public network address directly into this chat to bind it to the engine.",
+        "🔌 **UXUY Native Framework Connection Bridge**\n\n"
+        "Click step 1 below to initialize your web3 node structure natively under the secure partner contract, then route your registration signature path back here.",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
@@ -354,6 +340,9 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(msg, parse_mode="Markdown")
 
+async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logging.error(f"🚨 Crash Shield Catch: {context.error}")
+
 async def post_init(application: Application) -> None:
     asyncio.create_task(fetch_resilient_prices())
 
@@ -365,7 +354,6 @@ def main():
 
     app = Application.builder().token(token).post_init(post_init).build()
 
-    # Core Command Directives
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("connect", connect))
     app.add_handler(CommandHandler("wallet", wallet))
