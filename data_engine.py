@@ -6,7 +6,7 @@ import urllib.request
 import sqlite3
 import random
 from datetime import datetime
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 from cryptography.fernet import Fernet
 from eth_account import Account
@@ -30,6 +30,7 @@ cipher_suite = Fernet(ENCRYPTION_KEY if isinstance(ENCRYPTION_KEY, bytes) else E
 
 ADMIN_ID = 6546954770
 DB_FILE = "lens_pro_database.db"
+WEB_APP_URL = "https://1plutoson.github.io/crypto-trading-bot-/"
 
 # --- DB HELPER ENGINE ---
 def run_query(query: str, params: tuple = (), fetch: str = None):
@@ -216,6 +217,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     state = get_user_state(user_id)
     
+    # Persistent keyboard button to bring up the WebApp interface panel instantly
+    reply_markup = ReplyKeyboardMarkup.from_button(
+        KeyboardButton(
+            text="🚀 Open LENS Terminal", 
+            web_app=WebAppInfo(url=WEB_APP_URL)
+        ),
+        resize_keyboard=True
+    )
+    
     msg = (
         "🔥 **LENS INSTITUTIONAL PRO TERMINAL v12.0** 🔥\n"
         "Advanced Quantum Autonomous AI Engine active.\n\n"
@@ -230,19 +240,65 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📊 /positions - Isolated Portfolio View & Meme Performance PnL\n"
         "🤖 /autotrade [amount] - Deploy Pro AI Automated Strategy\n"
         "🛑 /closeall - Emergency Strategy Liquidation\n"
-        "📈 /price - Live Real-Time Multi-Asset Index Feed"
+        "📈 /price - Live Real-Time Multi-Asset Index Feed\n\n"
+        "⚡ *Tap the command layout key below to initialize the dashboard UI framework directly.*"
     )
-    await update.message.reply_text(msg, parse_mode="Markdown")
+    await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+
+# --- CORE WEB APP TELEMETRY LISTENER ---
+async def handle_terminal_actions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Interceptors telemetry events directly passed from the index.html user panel."""
+    user_id = update.effective_user.id
+    state = get_user_state(user_id)
+    raw_data = update.effective_message.web_app_data.data
+    
+    try:
+        payload = json.loads(raw_data)
+        action = payload.get("action")
+        
+        if action == "deposit":
+            await update.message.reply_text(
+                "💰 **DEPOSIT INITIALIZED (VIA WEB TERMINAL)**\n\n"
+                f"• **Current Infrastructure Layer:** `{state['account_mode']}`\n"
+                "• **Secure Gateway Target Address:**\n"
+                "`TYG7x89qWmNksPz2mAL17vKxR90PqX7z8L`\n\n"
+                "⚠️ *Send only USDT-TRC20. Credits apply to your state log automatically after network confirmation.*",
+                parse_mode="Markdown"
+            )
+            
+        elif action == "withdraw":
+            bal = state["demo_balance"] if state["account_mode"] == "DEMO" else state["real_balance"]
+            await update.message.reply_text(
+                "🏦 **WITHDRAWAL ACTION LOGGED**\n\n"
+                f"• **Available Environment Balance:** `${bal:.2f} USDT`\n"
+                f"• **Active Channel:** `{state['account_mode']}`\n\n"
+                "To extract these liquid asset funds out of the core node, use the chat matrix format:\n"
+                "👉 `/withdraw [amount]`",
+                parse_mode="Markdown"
+            )
+            
+        elif action == "trade":
+            bal = state["demo_balance"] if state["account_mode"] == "DEMO" else state["real_balance"]
+            await update.message.reply_text(
+                "📈 **QUANTUM ALGORITHMIC TRADE ACTION DETECTED**\n\n"
+                f"• **Available Liquid Capital:** `${bal:.2f} USDT`\n"
+                f"• **Target Network Core:** `{state['account_mode']}`\n\n"
+                "Initialize structural neural network exposure entries directly via chat input size:\n"
+                "👉 `/autotrade [amount]`",
+                parse_mode="Markdown"
+            )
+            
+    except Exception as e:
+        logging.error(f"Error parsing terminal payload: {e}")
+        await update.message.reply_text("❌ System telemetry link interrupted. Please reload the terminal.")
 
 async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     state = get_user_state(user_id)
     
-    # Simulating standard secure Web3 address lookups for funding verification
     simulated_live_blockchain_balance = state["last_seen_onchain_bal"]
     if context.args:
         try:
-            # Allows explicit injection for lightning-fast testing loops
             simulated_live_blockchain_balance = float(context.args[0])
         except ValueError:
             pass
@@ -305,7 +361,6 @@ async def positions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     state = get_user_state(user_id)
     
-    # Select fully isolated active position array based on profile state
     active_pool = state["demo_positions"] if state["account_mode"] == "DEMO" else state["real_positions"]
     
     if not active_pool:
@@ -333,18 +388,13 @@ async def positions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     net_pnl_pct = (total_pnl_cash / total_allocated) * 100 if total_allocated > 0 else 0.0
     msg += f"---------------------------------------\n**Net Performance Yield:** `{net_pnl_pct:+.2f}%` (${total_pnl_cash:+.2f} USDT)"
 
-    # --- DYNAMIC REACTION MEME ENGINE (PERCENTAGE ORIENTED) ---
     if net_pnl_pct >= 5.0:
-        # Tier 4: Moon shot / Gigachad Wealth Win
         animation_url = "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3ZtYnV6MndjYmF4M3R1dmtiaDJ3ODN4amF5M3QyY2Y3bjVpZnB1ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LdOyjZ7QX5N56wxtuK/giphy.gif"
     elif 0.0 <= net_pnl_pct < 5.0:
-        # Tier 3: Steady gains / Smug approving reaction
         animation_url = "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDFmYmN5ZndwZWd0amJ5MmNleWtlYnR6MWs5bjZicjRwbTJ0ZWoxbCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/YnkMcHgNIMW4Yfmjxr/giphy.gif"
     elif -5.0 <= net_pnl_pct < 0.0:
-        # Tier 2: Micro loss / Nervous panic sweat reaction
         animation_url = "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYnI1am8ydWV2NTRwdm5oamFndHhzYmxtbmlyM2Rnb3FhcXR6ZmN3bCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LRV5CHZ65ubtC/giphy.gif"
     else:
-        # Tier 1: Liquidation Warning / High rage explosion meme
         animation_url = "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNmt0bXNudmU1Y3Y2Zmxtd3k1cmVxeDR1aHk3M2I0eXo4azBtYmdtZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o6Zt4HU9uwXmXSAuI/giphy.gif"
         
     await update.message.reply_animation(animation=animation_url, caption=msg, parse_mode="Markdown")
@@ -375,7 +425,6 @@ async def autotrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state["allocated_trade_capital"] = req_amount
     save_user_state(user_id, state)
     
-    # Institutional Neural Matrix Optimization simulation
     ai_success_matrix_score = round(random.uniform(95.00, 99.99), 2)
     
     keyboard = [
@@ -560,7 +609,6 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         allocated_pool = state["allocated_trade_capital"]
         split_size = (allocated_pool / 2) / 3
         
-        # Divert targets safely to separate demo or real position arrays
         target_pool_key = "demo_positions" if state["account_mode"] == "DEMO" else "real_positions"
         
         for asset in ["ETH", "SOL", "BNB"]:
@@ -590,9 +638,13 @@ async def post_init(application: Application) -> None:
 def main():
     init_db()
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not token: return
+    if not token: 
+        print("Error: TELEGRAM_BOT_TOKEN environment variable is missing.")
+        return
+        
     app = Application.builder().token(token).post_init(post_init).build()
 
+    # --- REGISTRATION CORE ---
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CommandHandler("connect", connect))
@@ -607,8 +659,13 @@ def main():
     app.add_handler(CommandHandler("autotrade", autotrade))
     app.add_handler(CommandHandler("closeall", closeall))
     
+    # Crucial telemetry connection handler link
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_terminal_actions))
+    
     app.add_handler(CallbackQueryHandler(handle_callbacks))
     app.add_error_handler(global_error_handler)
+    
+    print("LENS Pro Architecture Engine Active...")
     app.run_polling()
 
 if __name__ == "__main__":
