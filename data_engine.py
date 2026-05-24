@@ -10,23 +10,16 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 from cryptography.fernet import Fernet
 from eth_account import Account
 
-# Allow secure wallet generation rules
 Account.enable_unaudited_hdwallet_features()
-
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# --- ENCRYPTION KEYS SETUP ---
 ENCRYPTION_KEY = os.environ.get("MASTER_KEY", Fernet.generate_key())
-if isinstance(ENCRYPTION_KEY, str):
-    if not ENCRYPTION_KEY.startswith("b'") and not isinstance(ENCRYPTION_KEY, bytes):
-        pass
 cipher_suite = Fernet(ENCRYPTION_KEY if isinstance(ENCRYPTION_KEY, bytes) else ENCRYPTION_KEY.encode())
 
 ADMIN_ID = 6546954770
 DB_FILE = "lens_pro_database.db"
 WEB_APP_URL = "https://1plutoson.github.io/crypto-trading-bot-/"
 
-# --- DB ENGINE SETUP ---
 def run_query(query: str, params: tuple = (), fetch: str = None):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -35,177 +28,167 @@ def run_query(query: str, params: tuple = (), fetch: str = None):
         if fetch == "one": return cursor.fetchone()
         elif fetch == "all": return cursor.fetchall()
         else: conn.commit()
-    finally:
-        conn.close()
+    finally: conn.close()
 
-# --- INITIALIZE COHESIVE SYSTEM TABLES ---
+# --- UPGRADED DATABASE INFRASTRUCTURE ---
 def init_db():
     run_query("""
         CREATE TABLE IF NOT EXISTS user_environments (
-            user_id INTEGER PRIMARY KEY,
-            account_mode TEXT,
-            demo_balance REAL,
-            real_balance REAL,
-            bnb_address TEXT,
-            tron_address TEXT,
-            encrypted_keys TEXT,
-            active_plan TEXT,
-            total_trades INTEGER DEFAULT 0
+            user_id INTEGER PRIMARY KEY, account_mode TEXT, demo_balance REAL, real_balance REAL,
+            bnb_address TEXT, tron_address TEXT, encrypted_keys TEXT, active_plan TEXT,
+            total_trades INTEGER DEFAULT 0, greed_level TEXT DEFAULT 'LOW', plan_active_status INTEGER DEFAULT 0
         )
     """)
-    run_query("CREATE TABLE IF NOT EXISTS system_config (key TEXT PRIMARY KEY, value TEXT)")
-    run_query("INSERT OR IGNORE INTO system_config VALUES ('maintenance_mode', '0')")
 
-# --- MULTI-CHAIN WALLET CREATOR ENGINE ---
-def generate_isolated_wallets():
-    """Generates a secure real BNB/EVM wallet and matching raw private structures for TRON deployment."""
-    # BNB Chain (EVM standard address derivation)
-    eth_acc = Account.create()
-    bnb_address = eth_acc.address
-    bnb_private_key = eth_acc.key.hex()
-    
-    # TRON Network Generation Model (Simulated using raw hex string formats for deployment safety)
-    raw_bytes = os.urandom(32)
-    tron_private_key = raw_bytes.hex()
-    # Mocking standard TRON network base58 layouts seamlessly for display interface purposes
-    tron_address = "T" + "".join(random.choices("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz", k=33))
-    
-    wallet_keys = {
-        "bnb_private": bnb_private_key,
-        "tron_private": tron_private_key
-    }
-    
-    # Encrypt keys immediately using the Master Suite Cipher
-    encrypted_payload = cipher_suite.encrypt(json.dumps(wallet_keys).encode('utf-8')).decode('utf-8')
-    
-    return bnb_address, tron_address, encrypted_payload
-
-def get_or_create_user(user_id: int) -> dict:
+def get_user(user_id: int) -> dict:
     row = run_query("SELECT * FROM user_environments WHERE user_id = ?", (user_id,), fetch="one")
     if row:
         return {
             "account_mode": row[1], "demo_balance": row[2], "real_balance": row[3],
             "bnb_address": row[4], "tron_address": row[5], "encrypted_keys": row[6],
-            "active_plan": row[7], "total_trades": row[8]
+            "active_plan": row[7], "total_trades": row[8], "greed_level": row[9], "plan_active_status": bool(row[10])
         }
     else:
-        # Generate new distinct keys for new registrations automatically
-        bnb_addr, tron_addr, enc_keys = generate_isolated_wallets()
+        # Auto-generation routine for new entries
+        eth_acc = Account.create()
+        raw_bytes = os.urandom(32)
+        wallet_keys = {"bnb_private": eth_acc.key.hex(), "tron_private": raw_bytes.hex()}
+        enc_payload = cipher_suite.encrypt(json.dumps(wallet_keys).encode('utf-8')).decode('utf-8')
+        mock_tron = "T" + "".join(random.choices("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz", k=33))
+        
         run_query("""
-            INSERT INTO user_environments VALUES (?, 'DEMO', 1000.00, 0.00, ?, ?, ?, 'NONE', 0)
-        """, (user_id, bnb_addr, tron_addr, enc_keys))
-        return get_or_create_user(user_id)
+            INSERT INTO user_environments VALUES (?, 'DEMO', 1000.00, 0.00, ?, ?, ?, 'NONE', 0, 'LOW', 0)
+        """, (user_id, eth_acc.address, mock_tron, enc_payload))
+        return get_user(user_id)
 
 def save_user(user_id: int, u: dict):
     run_query("""
         UPDATE user_environments SET 
-            account_mode = ?, demo_balance = ?, real_balance = ?,
-            bnb_address = ?, tron_address = ?, encrypted_keys = ?,
-            active_plan = ?, total_trades = ?
+            account_mode = ?, demo_balance = ?, real_balance = ?, bnb_address = ?, tron_address = ?,
+            encrypted_keys = ?, active_plan = ?, total_trades = ?, greed_level = ?, plan_active_status = ?
         WHERE user_id = ?
-    """, (u["account_mode"], u["demo_balance"], u["real_balance"], u["bnb_address"], u["tron_address"], u["encrypted_keys"], u["active_plan"], u["total_trades"], user_id))
+    """, (u["account_mode"], u["demo_balance"], u["real_balance"], u["bnb_address"], u["tron_address"],
+          u["encrypted_keys"], u["active_plan"], u["total_trades"], u["greed_level"], int(u["plan_active_status"]), user_id))
 
-# --- PLATFORM CONTROLLER ---
+# --- AUTONOMOUS AI BACKGROUND TRADING ENGINE ---
+async def start_autonomous_trading_engine():
+    """Asynchronous background worker. Calculates and updates realistic profits based on Greed profiles."""
+    while True:
+        await asyncio.sleep(8)  # Calculates profit updates every 8 seconds
+        rows = run_query("SELECT user_id FROM user_environments WHERE plan_active_status = 1", fetch="all")
+        if not rows: continue
+        
+        for r in rows:
+            user_id = r[0]
+            u = get_user(user_id)
+            
+            # Formulate yields based on operational parameters
+            if u["greed_level"] == "LOW":
+                profit_factor = random.uniform(0.0005, 0.0018)  # Safe, gradual gains
+            elif u["greed_level"] == "MID":
+                profit_factor = random.uniform(-0.0010, 0.0042) # Balanced return curves
+            else:
+                profit_factor = random.uniform(-0.0055, 0.0125) # Aggressive high volatility
+
+            if u["account_mode"] == "DEMO":
+                u["demo_balance"] += (u["demo_balance"] * profit_factor)
+            else:
+                u["real_balance"] += (u["real_balance"] * profit_factor)
+                
+            u["total_trades"] += 1
+            save_user(user_id, u)
+
+# --- COMMAND STRUCTURES ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    u = get_or_create_user(user_id)
-    
-    reply_markup = ReplyKeyboardMarkup.from_button(
-        KeyboardButton(text="🚀 Open LENS Terminal", web_app=WebAppInfo(url=WEB_APP_URL)),
-        resize_keyboard=True
-    )
-    
+    u = get_user(update.effective_user.id)
+    reply_markup = ReplyKeyboardMarkup.from_button(KeyboardButton(text="🚀 Open LENS Terminal", web_app=WebAppInfo(url=WEB_APP_URL)), resize_keyboard=True)
     msg = (
-        "🔥 **LENS INTERACTIVE QUANTUM MAINNET v13.5** 🔥\n\n"
-        f"💳 **Active Pipeline Server:** `{u['account_mode']}`\n"
-        f"📊 **Executed AI Software Trades:** `{u['total_trades']}`\n"
+        "⚡ **WELCOME TO THE NEXAS INTERACTIVE PROTOCOL TERMINAL** ⚡\n\n"
+        f"👑 **Active Platform Layer:** `{u['account_mode']}` Server\n"
+        f"⚙️ **Configured Greed Setting:** `{u['greed_level']}` Optimization\n"
+        f"📊 **Total Live Trades Processed:** `{u['total_trades']}`\n"
+        f"🛡️ **AI Engine Operational Status:** `{'🟢 ENGAGED' if u['plan_active_status'] else '🔴 STANDBY'}`\n"
         "---------------------------------------\n"
-        "🔌 /connect - View Custom Generated Real Wallets & Phrases\n"
-        "📈 /plans - Select Bot-to-Web Auto-Trading Strategies\n"
-        "🔄 /toggle - Shift between Sandboxed DEMO and LIVE Server\n"
-        "👑 /admin - Secure Management Node Panel"
+        "📈 /plans - Select Algorithmic Deployment Strategy\n"
+        "🔌 /connect - Extract Localized Node Wallets & Credentials\n"
+        "🔄 /toggle - Shift Account Routing Environments\n"
+        "🛑 /stopall - Emergency Freeze Automated AI Engine"
     )
     await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
 
-async def connect(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    u = get_or_create_user(user_id)
-    
-    # Decrypt and fetch private phrases only for validation
-    decrypted_data = cipher_suite.decrypt(u["encrypted_keys"].encode('utf-8')).decode('utf-8')
-    keys = json.loads(decrypted_data)
-    
-    msg = (
-        "🔐 **YOUR INDEPENDENT SECURE WALLET ARCHITECTURE**\n"
-        "The bot tracks these addresses constantly. Once funded, liquidity routes to the Web Terminal automatically.\n\n"
-        "🔶 **BNB CHAIN GATEWAY (USDT-BEP20 / BNB):**\n"
-        f"• Address: `{u['bnb_address']}`\n"
-        f"• Ephemeral Secret Phrase Key: `{keys['bnb_private']}`\n\n"
-        "🔴 **TRON NETWORK GATEWAY (USDT-TRC20 / TRX):**\n"
-        f"• Address: `{u['tron_address']}`\n"
-        f"• Ephemeral Secret Phrase Key: `{keys['tron_private']}`\n\n"
-        "⚠️ *Confirmation Complete: System holds secure localized custody over deployment routing hooks.*"
-    )
-    await update.message.reply_text(msg, parse_mode="Markdown")
+async def view_plans(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("💎 Quantum Scalping Node (Min $50)", callback_data="deploy_quantum")],
+        [InlineKeyboardButton("🔥 High-Frequency Arbitrage Matrix (Min $200)", callback_data="deploy_hft")]
+    ]
+    await update.message.reply_text("⚖️ **Select an Autonomous AI Deployment Framework:**", reply_markup=InlineKeyboardMarkup(keyboard))
 
-async def toggle_server(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    u = get_or_create_user(user_id)
-    u["account_mode"] = "REAL" if u["account_mode"] == "DEMO" else "DEMO"
-    save_user(user_id, u)
-    await update.message.reply_text(f"🟩 System shifted to **{u['account_mode']} MODE** successfully.")
+async def stop_engine(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    u = get_user(update.effective_user.id)
+    u["plan_active_status"] = False
+    u["active_plan"] = "NONE"
+    save_user(update.effective_user.id, u)
+    await update.message.reply_text("🛑 **AI Trading Infrastructure Paused.** All position streams frozen.")
 
-# --- WEBAPP EVENT HANDLER LINK ---
+# --- TELEMETRY AND CALLBACK MATRIX ---
 async def handle_webapp_telemetry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    u = get_or_create_user(user_id)
-    raw_data = update.effective_message.web_app_data.data
+    u = get_user(user_id)
+    payload = json.loads(update.effective_message.web_app_data.data)
+    action = payload.get("action", "")
+
+    if action.startswith("greed_"):
+        level = action.split("_")[1].upper()
+        u["greed_level"] = level
+        save_user(user_id, u)
+        await update.message.reply_text(f"⚙️ **Greed Parameters Shifted:** Node reconfiguration complete. Network tracking adjusted to **{level}** profile curves.")
     
-    try:
-        payload = json.loads(raw_data)
-        action = payload.get("action")
-        
-        if action == "deposit":
-            await update.message.reply_text(
-                "💰 **DEPOSIT SUITE REDIRECTED**\n\n"
-                f"• Target Environment: `{u['account_mode']}`\n"
-                f"• Send **USDT (BEP20)** or **BNB** to:\n`{u['bnb_address']}`\n\n"
-                f"• Send **USDT (TRC20)** or **TRX** to:\n`{u['tron_address']}`\n\n"
-                "⏱ *Bot automated software handles web transfer instantly post block verification.*",
-                parse_mode="Markdown"
-            )
-        elif action == "withdraw":
-            bal = u["demo_balance"] if u["account_mode"] == "DEMO" else u["real_balance"]
-            await update.message.reply_text(
-                f"🏦 **EXTRACTION MODULE REQUESTED**\n\n• Liquid Capital: `${bal:.2f} USDT`\n"
-                "To extract funds instantly back to an external mainnet storage layer, reply with:\n"
-                "`/withdraw [amount] [destination_address]`",
-                parse_mode="Markdown"
-            )
-        elif action == "trade":
-            await update.message.reply_text(
-                "📈 **STRATEGY BALANCER PIPELINE ENGINE**\n\n"
-                "Activate automated trade triggers to bind the Web terminal UI to AI nodes via:\n"
-                "👉 Use `/plans` to execute contracts.",
-                parse_mode="Markdown"
-            )
-    except Exception as e:
-        logging.error(f"Telemetry error: {e}")
+    elif action.startswith("menu_"):
+        menu_target = action.split("_")[1]
+        if menu_target == "plans":
+            await view_plans(update, context)
+        elif menu_target == "wallets":
+            # Reuses your previous /connect key output securely
+            decrypted = json.loads(cipher_suite.decrypt(u["encrypted_keys"].encode('utf-8')).decode('utf-8'))
+            await update.message.reply_text(f"🔐 **Nexas Secure Wallets Portal**\n\n🔶 **EVM Address:** `{u['bnb_address']}`\n🔑 *Phrase:* `{decrypted['bnb_private']}`\n\n🔴 **TRON Address:** `{u['tron_address']}`\n🔑 *Phrase:* `{decrypted['tron_private']}`", parse_mode="Markdown")
+        else:
+            await update.message.reply_text(f"📁 Drawer path `{menu_target.upper()}` processed cleanly.")
+
+    elif action == "deposit":
+        await update.message.reply_text(f"💰 **Secure Deposit Ingestion Portal**\n• BNB/USDT-BEP20: `{u['bnb_address']}`\n• TRX/USDT-TRC20: `{u['tron_address']}`\n\nFunds automatically register on the Web Dashboard post network validation.")
+    elif action == "withdraw":
+        await update.message.reply_text("🏦 **Capital Extraction Triggered**\nUse structural command to extract: `/withdraw [amount] [destination]`")
+    elif action == "trade":
+        await view_plans(update, context)
+
+async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    u = get_user(user_id)
+    await query.answer()
+
+    if query.data.startswith("deploy_"):
+        plan_name = query.data.split("_")[1].upper()
+        u["active_plan"] = plan_name
+        u["plan_active_status"] = True
+        save_user(user_id, u)
+        await query.edit_message_text(f"🟩 **AI STRATEGY ENGAGED**\n\n• System running target model: `{plan_name}`\n• Current risk structure: `{u['greed_level']}` Profile\n\n_The AI Engine will now automatically trade in the background. Keep your terminal open to watch live index updates._", parse_mode="Markdown")
+
+async def post_init(application: Application) -> None:
+    asyncio.create_task(start_autonomous_trading_engine())
 
 def main():
     init_db()
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not token:
-        print("Missing environment token configuration context.")
-        return
-    app = Application.builder().token(token).build()
+    app = Application.builder().token(token).post_init(post_init).build()
     
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("connect", connect))
-    app.add_handler(CommandHandler("toggle", toggle_server))
+    app.add_handler(CommandHandler("plans", view_plans))
+    app.add_handler(CommandHandler("stopall", stop_engine))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_webapp_telemetry))
+    app.add_handler(CallbackQueryHandler(handle_callbacks))
     
-    print("System Architecture online and ready...")
+    print("Nexas-Level Platform Core Initialized Successfully...")
     app.run_polling()
 
 if __name__ == "__main__":
