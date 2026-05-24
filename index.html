@@ -168,3 +168,35 @@
     </script>
 </body>
 </html>
+<script>
+    // 1. DYNAMIC MOCK USER NOTIFICATIONS
+    const firstNames = ["a", "b", "c", "d", "e", "f", "j", "m", "s", "t", "w", "z"];
+    const domains = ["@gmail.com", "@yahoo.com", "@icloud.com", "@proton.me"];
+    
+    function generateLiveNotification() {
+        // Create a fake email like m***@gmail.com
+        const letter = firstNames[Math.floor(Math.random() * firstNames.length)];
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        const fakeEmail = `${letter}***${domain}`;
+        
+        // Generate a random deposit between $1,200 and $85,000
+        const deposit = Math.floor(Math.random() * (85000 - 1200 + 1) + 1200);
+        const formattedDeposit = deposit.toLocaleString('en-US');
+        
+        // Push to your HTML element (Ensure you have an element with id="live-banner-text")
+        const bannerElement = document.getElementById("live-banner-text");
+        if (bannerElement) {
+            bannerElement.innerHTML = `📈 LIVE: ${fakeEmail} <span style="color:#00ff00;">+$${formattedDeposit}</span>`;
+        }
+    }
+
+    // Update the notification banner every 4.5 seconds
+    setInterval(generateLiveNotification, 4500);
+    generateLiveNotification(); // Run immediately on load
+
+    // 2. LIVE BALANCE SYNC (Assumes bot passes data to the WebApp)
+    // When the bot sends the payload, update the DOM automatically.
+    window.Telegram.WebApp.onEvent('mainButtonClicked', function() {
+        // Telegram UI interaction logic here
+    });
+</script>
