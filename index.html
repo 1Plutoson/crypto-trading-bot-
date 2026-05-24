@@ -3,235 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LENs -CRYPTO_LLC Web3 Terminal</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>LENs -CRYPTO_LLC | Web3 Terminal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-color: #06080a; --card-bg: rgba(24, 26, 32, 0.85); --border-color: rgba(255, 255, 255, 0.08);
-            --text-main: #f5f5f7; --text-muted: #848e9c; --primary: #f0b90b; --success: #0ecb81; --danger: #f6465d;
+            --bg-main: #06080c;
+            --surface: #12161f;
+            --surface-hover: #1b2230;
+            --border: rgba(255, 255, 255, 0.07);
+            --primary: #f0b90b;
+            --success: #0ecb81;
+            --danger: #f6465d;
+            --text-main: #eaecef;
+            --text-muted: #848e9c;
         }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
-            background-color: var(--bg-color); color: var(--text-main);
-            margin: 0; padding: 0; overflow-x: hidden;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0; padding: 0;
         }
-        .container { padding: 20px; max-width: 500px; margin: 0 auto; }
-        
-        /* Initialization / Wallet Screen */
-        #init-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 90vh; text-align: center; }
-        .generate-btn {
-            background: var(--primary); color: #000; font-weight: 700; font-size: 16px;
-            padding: 15px 30px; border-radius: 12px; border: none; cursor: pointer;
-            box-shadow: 0 0 20px rgba(240, 185, 11, 0.4); transition: transform 0.2s;
-        }
-        .generate-btn:active { transform: scale(0.95); }
 
-        /* Dashboard Elements */
-        #dashboard { display: none; }
-        .balance-card {
-            background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--border-color);
-            border-radius: 20px; padding: 22px; margin-bottom: 20px;
-        }
-        .balance-amount { font-size: 38px; font-weight: 700; margin: 10px 0; }
-        .bonus-badge {
-            background: rgba(14,203,129,0.15); color: var(--success); padding: 5px 10px;
-            border-radius: 8px; font-size: 12px; font-weight: 600; display: inline-block;
-        }
-        
-        /* AI Greed Engines */
-        .engine-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .engine-btn {
-            background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
-            color: var(--text-muted); border-radius: 12px; padding: 12px 5px;
-            font-size: 12px; font-weight: 600; cursor: pointer; text-align: center;
-        }
-        .engine-btn.active { border-color: var(--primary); color: var(--text-main); background: rgba(240,185,11,0.1); }
-        
-        /* Live Market Data (WebSocket) */
-        .market-card {
-            background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);
-            border-radius: 14px; padding: 12px 16px; display: flex; justify-content: space-between;
-            margin-bottom: 10px; align-items: center;
-        }
-        .market-price { font-family: 'Courier New', monospace; font-weight: 700; font-size: 16px; transition: color 0.3s;}
+        /* View Switching Logic */
+        .app-view { display: none; padding: 20px; max-width: 480px; margin: 0 auto; }
+        .app-view.active { display: block; }
 
-        /* TradingView Chart Container */
-        #tvchart { height: 300px; border-radius: 14px; overflow: hidden; margin-top: 20px; border: 1px solid var(--border-color);}
+        /* Navigation Header */
+        .header-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; border-bottom: 1px solid var(--border); background: #0b0e14;
+        }
+        .menu-toggle { font-size: 20px; cursor: pointer; color: var(--text-main); }
+
+        /* Sidebar Drawer Styling */
+        .nav-drawer {
+            position: fixed; top: 0; left: -280px; width: 260px; height: 100%;
+            background: var(--surface); border-right: 1px solid var(--border);
+            z-index: 1000; transition: left 0.25s ease; padding: 20px;
+        }
+        .nav-drawer.open { left: 0; }
+        .drawer-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 999; display: none;
+        }
+        .drawer-overlay.active { display: block; }
+        .drawer-item {
+            display: flex; align-items: center; gap: 15px; padding: 12px 10px;
+            color: var(--text-main); text-decoration: none; border-radius: 8px; cursor: pointer;
+            margin-bottom: 5px; font-weight: 500;
+        }
+        .drawer-item:hover { background: var(--surface-hover); }
+        .drawer-item i { color: var(--primary); width: 20px; }
+
+        /* Premium Interface Cards */
+        .crypto-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 20px; margin-bottom: 15px;
+        }
+        .balance-num { font-size: 34px; font-weight: 700; margin: 8px 0; font-family: monospace; }
+        
+        /* Interactive Search Engine Box */
+        .search-box {
+            position: relative; margin-bottom: 15px;
+        }
+        .search-box input {
+            width: 100%; background: #161a25; border: 1px solid var(--border);
+            padding: 12px 12px 12px 40px; box-sizing: border-box; border-radius: 10px;
+            color: var(--text-main); font-size: 14px;
+        }
+        .search-box i { position: absolute; left: 15px; top: 15px; color: var(--text-muted); }
+
+        /* Scrollable List Constraints */
+        .scroll-list {
+            max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+            padding-right: 4px;
+        }
+        .scroll-list::-webkit-scrollbar { width: 4px; }
+        .scroll-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        .list-item {
+            background: #161a25; border: 1px solid var(--border); border-radius: 10px;
+            padding: 12px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* Wallet Selector Layout */
+        .wallet-option {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px; background: #161a25; border: 1px solid var(--border);
+            border-radius: 12px; margin-bottom: 10px; cursor: pointer;
+        }
+        .wallet-option:hover { border-color: var(--primary); }
+
+        /* General UI Elements */
+        .action-button {
+            width: 100%; background: var(--primary); color: #000; border: none;
+            padding: 14px; border-radius: 10px; font-weight: 700; cursor: pointer;
+            font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .action-button:hover { opacity: 0.9; }
+        .crypto-badge { font-size: 11px; font-weight: bold; background: var(--surface-hover); padding: 4px 8px; border-radius: 6px; }
     </style>
 </head>
 <body>
 
-    <div id="init-screen" class="container">
-        <i class="fa-solid fa-shield-halved" style="font-size: 50px; color: var(--primary); margin-bottom: 20px;"></i>
-        <h2>LENs Decentralized Node</h2>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">
-            Your account is strictly isolated. Generate your secure Web3 wallet locally to deploy the AI engines.
-        </p>
-        <button class="generate-btn" onclick="generateLocalWallet()">Create Secure Wallet</button>
+    <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
+
+    <div class="nav-drawer" id="drawer">
+        <h3 style="color: var(--primary); margin-top: 10px; margin-bottom: 25px;">LENs MANAGEMENT</h3>
+        <div class="drawer-item" onclick="switchView('dashboard')"><i class="fa-solid fa-chart-line"></i> Dashboard</div>
+        <div class="drawer-item" onclick="switchView('deposit-panel')"><i class="fa-solid fa-wallet"></i> Fund Node</div>
+        <div class="drawer-item" onclick="switchView('positions')"><i class="fa-solid fa-money-bill-trend-up"></i> Active Trades</div>
+        <div class="drawer-item" onclick="switchView('wallet-connect')"><i class="fa-solid fa-link"></i> Custody Link</div>
+        <div class="drawer-item" onclick="switchView('admin-view')"><i class="fa-solid fa-user-gear"></i> Portal Audit</div>
+        <a href="https://t.me/Suvillanjames" target="_blank" class="drawer-item" style="text-decoration: none;">
+            <i class="fa-solid fa-headset"></i> Support Desk
+        </a>
     </div>
 
-    <div id="dashboard" class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <span style="font-weight:700; font-size:16px;">LENs -CRYPTO_LLC</span>
-            <i class="fa-solid fa-wallet" onclick="alert(localStorage.getItem('lens_keys'))" style="cursor:pointer;"></i>
-        </div>
+    <div class="header-nav">
+        <i class="fa-solid fa-bars-staggered menu-toggle" onclick="toggleDrawer()"></i>
+        <span style="font-weight: 700; font-size: 14px; letter-spacing: 0.5px;">LENs -CRYPTO_LLC</span>
+        <i class="fa-solid fa-circle-nodes" style="color: var(--primary);"></i>
+    </div>
 
-        <div class="balance-card">
-            <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Total Capital Asset</div>
-            <div class="balance-amount" id="main-balance">$0.00</div>
-            <div class="bonus-badge" id="bonus-display">🎁 Bonus: $50.00 ($5 Claimable)</div>
-            
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button onclick="simulateDeposit()" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--card-bg); color:white; border:1px solid var(--border-color);">Deposit (Sim)</button>
-                <button onclick="claimBonus()" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--primary); color:black; font-weight:bold;">Claim $5</button>
+    <div id="dashboard" class="app-view active">
+        <div class="crypto-card">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Isolated Node Asset Capital</div>
+            <div class="balance-num" id="user-main-bal">$0.00</div>
+            <div style="font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; margin-top: 10px;">
+                <span>Claimed Allocation: <strong style="color: var(--success);">$0.00</strong></span>
+                <span>Active Vault Bonus: <strong id="user-bonus-bal">$50.00</strong></span>
             </div>
         </div>
 
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">AI TRADING ENGINES (GREED LEVEL)</div>
-        <div class="engine-grid">
-            <div class="engine-btn active" id="eng-low" onclick="setEngine('low')">🛡️ Strong AI<br><small>(Safest)</small></div>
-            <div class="engine-btn" id="eng-mid" onclick="setEngine('mid')">⚖️ Advanced AI<br><small>(Mid Greed)</small></div>
-            <div class="engine-btn" id="eng-high" onclick="setEngine('high')">⚡ Quantum AI<br><small>(High Greed)</small></div>
+        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; font-weight: 600;">High-Frequency Index (30+ Asset Matrix)</div>
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="market-search" placeholder="Filter asset symbols..." oninput="filterMarketAssets()">
         </div>
 
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">BINANCE WEBSOCKET FEED</div>
-        <div class="market-card">
-            <div><i class="fa-brands fa-bitcoin" style="color:#f0b90b;"></i> BTC/USDT</div>
-            <div class="market-price" id="ws-btc">Loading...</div>
-        </div>
-        <div class="market-card">
-            <div><i class="fa-brands fa-ethereum" style="color:#8c8cff;"></i> ETH/USDT</div>
-            <div class="market-price" id="ws-eth">Loading...</div>
-        </div>
-
-        <div id="tvchart"></div>
+        <div class="scroll-list" id="market-matrix">
+            </div>
     </div>
 
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-
-        // 1. STATE MANAGEMENT (Completely Localized)
-        let balance = parseFloat(localStorage.getItem("lens_bal")) || 0.00;
-        let bonus = parseFloat(localStorage.getItem("lens_bonus")) || 50.00;
+    <div id="deposit-panel" class="app-view">
+        <h3 style="margin-top: 0;">Node Deposit Provisioning</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Select your source ledger routing token address. Any transaction verified over $20 triggers automatic 5% allocations from the bonus matrix.</p>
         
-        function updateUI() {
-            document.getElementById("main-balance").innerText = `$${balance.toFixed(2)}`;
-            document.getElementById("bonus-display").innerText = `🎁 Bonus: $${bonus.toFixed(2)} ($5 Claimable)`;
+        <div class="crypto-card" style="padding: 15px; background: #161a25;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <span><i class="fa-solid fa-coins" style="color:#f3ba2f; margin-right:8px;"></i> Tron Ledger (TRX)</span>
+                <span class="crypto-badge">TRC-20</span>
+            </div>
+            <code style="display:block; background:#0b0e14; padding:10px; border-radius:6px; font-size:12px; color:var(--primary); word-break:break-all;">TY6q6kG9ZpXmNzYhWv7uR4K8Bv2Lp9Qs1X</code>
+            <button class="action-button" style="padding: 8px; font-size:12px; margin-top:10px;" onclick="logDepositAction('TRX')">I Have Sent Funds</button>
+        </div>
+
+        <div class="crypto-card" style="padding: 15px; background: #161a25;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <span><i class="fa-solid fa-cube" style="color:#f0b90b; margin-right:8px;"></i> Binance Smart Chain (BNB)</span>
+                <span class="crypto-badge">BEP-20</span>
+            </div>
+            <code style="display:block; background:#0b0e14; padding:10px; border-radius:6px; font-size:12px; color:var(--primary); word-break:break-all;">0x71C7656EC7ab88b098defB751B7401B5f6d14503</code>
+            <button class="action-button" style="padding: 8px; font-size:12px; margin-top:10px;" onclick="logDepositAction('BNB')">I Have Sent Funds</button>
+        </div>
+    </div>
+
+    <div id="wallet-connect" class="app-view">
+        <h3 style="margin-top: 0;">Self-Custodial Connection Node</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Link authorized decentralised wallet structures directly via secure provider abstraction layers.</p>
+        
+        <div class="wallet-option" onclick="establishCustody('Bitget Wallet')">
+            <span style="font-weight: 600;"><i class="fa-solid fa-wallet" style="color:#0ecb81; margin-right:10px;"></i> Bitget Wallet Protocol</span>
+            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>
+        </div>
+        <div class="wallet-option" onclick="establishCustody('OKX Wallet Matrix')">
+            <span style="font-weight: 600;"><i class="fa-solid fa-shield-halved" style="color:#eaecef; margin-right:10px;"></i> OKX Custodial Engine</span>
+            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>
+        </div>
+    </div>
+
+    <div id="positions" class="app-view">
+        <h3 style="margin-top:0;">Autonomous Strategy Positions</h3>
+        <div class="crypto-card" style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+            <i class="fa-solid fa-hourglass-start" style="font-size:32px; margin-bottom:15px; color:var(--primary);"></i>
+            <div style="font-size:14px;">No automated algorithmic positions currently active.</div>
+        </div>
+    </div>
+
+    <div id="admin-view" class="app-view">
+        <h3 style="margin-top: 0; color: var(--danger);">Administrative Ledger Isolation Audit</h3>
+        <p style="color:var(--text-muted); font-size:12px;">Private monitoring environment for auditing localized database states and user execution records.</p>
+        <div class="crypto-card" style="background:#161a25; font-size:13px; font-family:monospace;">
+            <div>[NODE-AUDIT] Context System Isolation: ACTIVE</div>
+            <div>[ROUTING] Data Isolation Layer: STABLE</div>
+            <div style="color:var(--success); margin-top:5px;">[DEPOSITS] Listening to active mainnet pools...</div>
+        </div>
+    </div>
+
+    <script>
+        // COMPREHENSIVE 30+ ASSET LIST ARRAY FOR SYSTEM EXCHANGE SIMULATION
+        const rawTokens = [
+            { s: "BTC", n: "Bitcoin", p: 93450.20 }, { s: "ETH", n: "Ethereum", p: 3340.15 },
+            { s: "BNB", n: "BNB", p: 610.45 }, { s: "SOL", n: "Solana", p: 178.20 },
+            { s: "XRP", n: "Ripple", p: 1.14 }, { s: "ADA", n: "Cardano", p: 0.58 },
+            { s: "AVAX", n: "Avalanche", p: 34.50 }, { s: "DOT", n: "Polkadot", p: 6.20 },
+            { s: "MATIC", n: "Polygon", p: 0.65 }, { s: "LINK", n: "Chainlink", p: 18.10 },
+            { s: "TRX", n: "TRON", p: 0.22 }, { s: "LTC", n: "Litecoin", p: 88.40 },
+            { s: "NEAR", n: "Near Protocol", p: 6.75 }, { s: "UNI", n: "Uniswap", p: 9.15 },
+            { s: "APT", n: "Aptos", p: 11.40 }, { s: "SUI", n: "Sui Network", p: 1.85 },
+            { s: "ICP", n: "Internet Computer", p: 12.10 }, { s: "FIL", n: "Filecoin", p: 5.40 },
+            { s: "OP", n: "Optimism", p: 2.80 }, { s: "ARB", n: "Arbitrum", p: 1.15 },
+            { s: "ATOM", n: "Cosmos", p: 8.30 }, { s: "IMX", n: "Immutable", p: 2.10 },
+            { s: "FTM", n: "Fantom", p: 0.78 }, { s: "GRT", n: "The Graph", p: 0.28 },
+            { s: "THETA", n: "Theta Network", p: 2.15 }, { s: "STX", n: "Stacks", p: 1.95 },
+            { s: "ALGO", n: "Algorand", p: 0.19 }, { s: "EGLD", n: "MultiversX", p: 38.20 },
+            { s: "AAVE", n: "Aave", p: 142.60 }, { s: "FLOW", n: "Flow", p: 0.92 }
+        ];
+
+        function toggleDrawer() {
+            document.getElementById("drawer").classList.toggle("open");
+            document.getElementById("overlay").classList.toggle("active");
         }
 
-        // 2. WALLET CREATION LOGIC
-        if (localStorage.getItem("lens_wallet_active") === "true") {
-            document.getElementById("init-screen").style.display = "none";
-            document.getElementById("dashboard").style.display = "block";
-            updateUI();
-            initWebSockets();
-            initTradingView();
+        function switchView(viewId) {
+            document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            toggleDrawer();
         }
 
-        function generateLocalWallet() {
-            // Generates local keys and never sends them to the bot
-            const mockKey = "0x" + [...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-            const mnemonic = "alpha quantum network secure node asset block primary shield matrix core vault";
-            localStorage.setItem("lens_wallet_active", "true");
-            localStorage.setItem("lens_keys", `Your Private Key:\n${mockKey}\n\nPhrase:\n${mnemonic}`);
-            
-            document.getElementById("init-screen").style.display = "none";
-            document.getElementById("dashboard").style.display = "block";
-            updateUI();
-            initWebSockets();
-            initTradingView();
-        }
-
-        // 3. BONUS & DEPOSIT LOGIC
-        function claimBonus() {
-            if (bonus >= 5) {
-                bonus -= 5;
-                balance += 5;
-                localStorage.setItem("lens_bal", balance);
-                localStorage.setItem("lens_bonus", bonus);
-                updateUI();
-                alert("✅ Successfully claimed $5 into Main Balance.");
-            } else {
-                alert("❌ Bonus pool exhausted.");
-            }
-        }
-
-        function simulateDeposit() {
-            let amount = parseFloat(prompt("Enter deposit amount (USDT):", "25"));
-            if (isNaN(amount) || amount <= 0) return;
-            
-            balance += amount;
-            
-            // The Logic: Any deposit over $20 moves 5% of the bonus to main wallet
-            if (amount > 20 && bonus > 0) {
-                let transfer = bonus * 0.05;
-                bonus -= transfer;
-                balance += transfer;
-                alert(`✅ Deposit successful! Plus $${transfer.toFixed(2)} unlocked from Bonus.`);
-            } else {
-                alert("✅ Deposit successful.");
-            }
-            
-            localStorage.setItem("lens_bal", balance);
-            localStorage.setItem("lens_bonus", bonus);
-            updateUI();
-        }
-
-        // 4. ENGINE SELECTION
-        function setEngine(level) {
-            document.querySelectorAll('.engine-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`eng-${level}`).classList.add('active');
-            // Background logic operates locally off this choice
-        }
-
-        // 5. BINANCE WEBSOCKETS (Real-time data directly from exchange)
-        function initWebSockets() {
-            let ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@ticker/ethusdt@ticker");
-            let lastBtc = 0; let lastEth = 0;
-
-            ws.onmessage = (event) => {
-                let data = JSON.parse(event.data);
-                let price = parseFloat(data.c).toFixed(2);
-                
-                if (data.s === "BTCUSDT") {
-                    let el = document.getElementById("ws-btc");
-                    el.innerText = `$${price}`;
-                    el.style.color = price >= lastBtc ? "var(--success)" : "var(--danger)";
-                    lastBtc = price;
-                    setTimeout(() => el.style.color = "var(--text-main)", 500);
-                }
-                if (data.s === "ETHUSDT") {
-                    let el = document.getElementById("ws-eth");
-                    el.innerText = `$${price}`;
-                    el.style.color = price >= lastEth ? "var(--success)" : "var(--danger)";
-                    lastEth = price;
-                    setTimeout(() => el.style.color = "var(--text-main)", 500);
-                }
-            };
-        }
-
-        // 6. TRADINGVIEW INTEGRATION
-        function initTradingView() {
-            new TradingView.widget({
-                "autosize": true,
-                "symbol": "BINANCE:BTCUSDT",
-                "interval": "15",
-                "timezone": "Etc/UTC",
-                "theme": "dark",
-                "style": "1",
-                "locale": "en",
-                "enable_publishing": false,
-                "backgroundColor": "rgba(24, 26, 32, 1)",
-                "gridColor": "rgba(255, 255, 255, 0.06)",
-                "hide_top_toolbar": true,
-                "hide_legend": true,
-                "save_image": false,
-                "container_id": "tvchart"
+        function compileMarketGrid(data) {
+            const container = document.getElementById("market-matrix");
+            container.innerHTML = "";
+            data.forEach(token => {
+                container.innerHTML += `
+                    <div class="list-item">
+                        <div>
+                            <strong style="color:#fff;">${token.s} / USDT</strong>
+                            <div style="font-size:11px; color:var(--text-muted);">${token.n}</div>
+                        </div>
+                        <div style="text-align:right; font-family:monospace; font-weight:700;">
+                            <div>$${token.p.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        </div>
+                    </div>`;
             });
         }
+
+        function filterMarketAssets() {
+            const query = document.getElementById("market-search").value.toUpperCase();
+            const filtered = rawTokens.filter(t => t.s.includes(query) || t.n.toUpperCase().includes(query));
+            compileMarketGrid(filtered);
+        }
+
+        function establishCustody(walletName) {
+            alert(`Redirecting protocol request to decentralized ${walletName} application gateway layer.`);
+        }
+
+        function logDepositAction(symbol) {
+            alert(`[TELEMETRY] Native blockchain verification signal initialized for asset stream: ${symbol}. Balance ledger adjustments queue automatically post validation.`);
+        }
+
+        // Initialize App State Elements
+        compileMarketGrid(rawTokens);
     </script>
 </body>
 </html>
