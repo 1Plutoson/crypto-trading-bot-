@@ -2,201 +2,238 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LENS Pro Terminal</title>
-    
-    <!-- Telegram Web App JS API -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LENS Pro Terminal Dashboard</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        nexaDark: '#0d1117',
-                        nexaCard: '#161b22',
-                        nexaGreen: '#00e676',
-                        nexaGreenDim: 'rgba(0, 230, 118, 0.1)',
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
-        body { background-color: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        /* Hides scrollbar for clean app look */
-        ::-webkit-scrollbar { display: none; }
+        :root {
+            --bg-color: #0b0e11;
+            --card-bg: #181a20;
+            --text-main: #eaecef;
+            --text-muted: #848e9c;
+            --primary: #f0b90b;
+            --success: #0ecb81;
+            --danger: #f6465d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        /* Live Ticker Styling */
+        .notification-ticker {
+            width: 100%;
+            background-color: #12161a;
+            border-bottom: 1px solid #23282d;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .ticker-content {
+            display: inline-block;
+            transition: opacity 0.5s ease-in-out;
+        }
+        /* Container */
+        .dashboard-container {
+            width: 90%;
+            max-width: 450px;
+            margin-top: 20px;
+        }
+        .header {
+            margin-bottom: 20px;
+        }
+        .header h2 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--text-muted);
+        }
+        .header h1 {
+            margin: 5px 0 0 0;
+            font-size: 26px;
+            font-weight: bold;
+        }
+        /* Balance Card */
+        .balance-card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            margin-bottom: 25px;
+            position: relative;
+        }
+        .balance-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .privacy-toggle {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 16px;
+            transition: color 0.2s;
+        }
+        .privacy-toggle:hover {
+            color: var(--text-main);
+        }
+        .balance-amount {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 12px 0;
+            letter-spacing: -0.5px;
+            transition: all 0.1s;
+        }
+        /* Action Buttons Grid */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .action-btn {
+            background-color: var(--card-bg);
+            border: 1px solid #2b3139;
+            color: var(--text-main);
+            border-radius: 12px;
+            padding: 15px 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .action-btn:active {
+            transform: scale(0.95);
+            background-color: #2b3139;
+        }
+        .action-btn i {
+            font-size: 20px;
+            color: var(--primary);
+        }
     </style>
 </head>
-<body class="flex justify-center h-screen overflow-y-auto">
+<body>
 
-    <!-- Mobile App Container -->
-    <div class="w-full max-w-md bg-nexaDark min-h-screen p-4 flex flex-col gap-6 relative">
-        
-        <!-- Header -->
-        <header class="flex justify-between items-center mt-2">
-            <div class="flex items-center gap-2 text-nexaGreen font-bold text-xl tracking-wider">
-                <i class="fa-solid fa-bolt"></i> LENS
-            </div>
-            <div class="flex gap-4 text-gray-400 text-lg">
-                <i class="fa-solid fa-bell relative">
-                    <span class="absolute -top-1 -right-1 bg-red-500 rounded-full w-2 h-2"></span>
-                </i>
-                <i class="fa-solid fa-bars"></i>
-            </div>
-        </header>
-
-        <!-- Live Feed Pill -->
-        <div class="flex justify-center">
-            <div class="bg-nexaCard border border-gray-800 rounded-full px-4 py-1 flex items-center gap-2 text-xs font-semibold text-gray-300">
-                <i class="fa-solid fa-arrow-trend-up text-nexaGreen"></i>
-                LIVE: b***@gmail.com <span class="text-nexaGreen">+$42,453</span>
-            </div>
-        </div>
-
-        <!-- Greeting -->
-        <div>
-            <p class="text-gray-400 text-sm">Good Morning,</p>
-            <h1 class="text-2xl font-bold tracking-wide">ADMIN 👑</h1>
-        </div>
-
-        <!-- Main Balance Card -->
-        <div class="bg-nexaCard rounded-3xl p-6 relative shadow-lg shadow-black/50 border border-gray-800">
-            <p class="text-gray-400 text-xs font-bold tracking-widest uppercase mb-1">• Current Balance</p>
-            <h2 class="text-4xl font-black mb-3">$322.26</h2>
-            <div class="flex gap-2 text-xs font-bold">
-                <span class="bg-nexaGreenDim text-nexaGreen px-2 py-1 rounded">+$126,310.80</span>
-                <span class="text-gray-400 py-1">+39,195.31% all-time</span>
-            </div>
-            <i class="fa-regular fa-eye-slash absolute top-6 right-6 text-gray-500 text-lg"></i>
-        </div>
-
-        <!-- Action Buttons Matrix -->
-        <div class="grid grid-cols-3 gap-3">
-            <button id="deposit-btn" class="bg-nexaGreenDim border border-nexaGreen/30 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-nexaGreen/20 active:scale-95 transition-all">
-                <i class="fa-solid fa-wallet text-nexaGreen text-xl"></i>
-                <span class="text-nexaGreen font-bold text-sm">Deposit</span>
-            </button>
-            <button id="withdraw-btn" class="bg-nexaCard border border-gray-800 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-800 active:scale-95 transition-all">
-                <i class="fa-solid fa-arrow-down text-gray-300 text-xl"></i>
-                <span class="text-gray-300 font-bold text-sm">Withdraw</span>
-            </button>
-            <button id="trade-btn" class="bg-nexaCard border border-gray-800 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-gray-800 active:scale-95 transition-all">
-                <i class="fa-solid fa-chart-line text-gray-300 text-xl"></i>
-                <span class="text-gray-300 font-bold text-sm">Trade</span>
-            </button>
-        </div>
-
-        <!-- Statistics Grid -->
-        <div class="grid grid-cols-2 gap-3">
-            <div class="bg-nexaCard border border-gray-800 rounded-2xl p-4">
-                <p class="text-gray-400 text-xs font-bold uppercase mb-1">Total Profit</p>
-                <h3 class="text-xl font-black text-nexaGreen">$126,310.80</h3>
-            </div>
-            <div class="bg-nexaCard border border-gray-800 rounded-2xl p-4">
-                <p class="text-gray-400 text-xs font-bold uppercase mb-1">Total Trades</p>
-                <h3 class="text-xl font-black text-yellow-500">962</h3>
-            </div>
-        </div>
-
-        <!-- Market Overview -->
-        <div class="mt-2">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-gray-300 font-bold"><i class="fa-solid fa-bolt text-nexaGreen mr-2"></i> Market Overview</h3>
-                <span class="text-gray-500 text-xs font-bold cursor-pointer hover:text-white">View More ></span>
-            </div>
-            
-            <!-- Asset Row -->
-            <div class="bg-nexaCard border border-gray-800 rounded-2xl p-4 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="bg-orange-500/20 p-2 rounded-full">
-                        <i class="fa-brands fa-bitcoin text-orange-500 text-xl"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-gray-200">Bitcoin</h4>
-                        <p class="text-gray-500 text-xs">BTC</p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <h4 class="font-bold text-gray-200">$74,598.35</h4>
-                    <p class="text-red-500 text-xs bg-red-500/10 inline-block px-1 rounded mt-1">📉 1.05%</p>
-                </div>
-            </div>
-        </div>
-
+    <!-- 1. LIVE CONVINCING SIMULATION TICKER -->
+    <div class="notification-ticker">
+        <span id="ticker-text" class="ticker-content">Initializing Secure Feed...</span>
     </div>
 
-    <!-- Init Telegram WebApp API Engine & Action Listeners -->
-    <script>
-        // 1. Setup viewport variables
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-        
-        window.Telegram.WebApp.setHeaderColor('#0d1117');
-        window.Telegram.WebApp.setBackgroundColor('#0d1117');
+    <div class="dashboard-container">
+        <div class="header">
+            <h2>Welcome Back,</h2>
+            <h1>ADMIN Node 👑</h1>
+        </div>
 
-        // 2. Data transmission protocol
-        function sendActionToBackend(actionName) {
-            const payload = {
-                action: actionName,
-                timestamp: new Date().getTime(),
-                client: "LENS_Mobile_Terminal"
-            };
+        <!-- 2. BALANCE CARD WITH FUNCTIONAL PRIVACY EYE TOGGLE -->
+        <div class="balance-card">
+            <div class="balance-label">
+                <span>Current Balance</span>
+                <i class="fa-solid fa-eye privacy-toggle" id="eye-icon" onclick="toggleBalancePrivacy()"></i>
+            </div>
+            <div class="balance-amount" id="balance-display">$322.26</div>
+            <div style="color: var(--success); font-weight: 600; font-size: 14px;">
+                +$126,310.80 <span style="color: var(--text-muted); font-weight: normal; font-size: 12px;">+39,195.31% all-time</span>
+            </div>
+        </div>
+
+        <!-- 3. TERMINAL TELEMETRY ACTION GRID -->
+        <div class="actions-grid">
+            <button class="action-btn" onclick="sendActionToBot('deposit')">
+                <i class="fa-solid fa-wallet"></i>
+                Deposit
+            </button>
+            <button class="action-btn" onclick="sendActionToBot('withdraw')">
+                <i class="fa-solid fa-money-bill-transfer"></i>
+                Withdraw
+            </button>
+            <button class="action-btn" onclick="sendActionToBot('trade')">
+                <i class="fa-solid fa-chart-line"></i>
+                Autotrade
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // --- PRIVACY EYE LOGIC ---
+        let isBalanceHidden = false;
+        const realBalance = "$322.26";
+        const maskedBalance = "••••••";
+
+        function toggleBalancePrivacy() {
+            const balanceElement = document.getElementById("balance-display");
+            const eyeIcon = document.getElementById("eye-icon");
             
-            // Fires data package directly to Python's web_app_data_handler listener
-            window.Telegram.WebApp.sendData(JSON.stringify(payload));
+            isBalanceHidden = !isBalanceHidden;
+            
+            if (isBalanceHidden) {
+                balanceElement.innerText = maskedBalance;
+                eyeIcon.classList.remove("fa-eye");
+                eyeIcon.classList.add("fa-eye-slash");
+            } else {
+                balanceElement.innerText = realBalance;
+                eyeIcon.classList.remove("fa-eye-slash");
+                eyeIcon.classList.add("fa-eye");
+            }
         }
 
-        // 3. Event bindings for interactive matrix buttons
-        document.getElementById('deposit-btn').addEventListener('click', () => {
-            sendActionToBackend('deposit');
-        });
+        // --- LIVE NOTIFICATION TICKER SIMULATOR ---
+        const prefixes = ["a", "c", "f", "h", "k", "m", "o", "r", "s", "t", "w", "z"];
+        const platforms = ["@gmail.com", "@yahoo.com", "@outlook.com", "@proton.me", "@icloud.com"];
+        
+        function updateLiveTicker() {
+            const tickerText = document.getElementById("ticker-text");
+            if (!tickerText) return;
 
-        document.getElementById('withdraw-btn').addEventListener('click', () => {
-            sendActionToBackend('withdraw');
-        });
+            // Fade out
+            tickerText.style.opacity = 0;
 
-        document.getElementById('trade-btn').addEventListener('click', () => {
-            sendActionToBackend('trade');
-        });
+            setTimeout(() => {
+                const randomUser = prefixes[Math.floor(Math.random() * prefixes.length)] + "***" + platforms[Math.floor(Math.random() * platforms.length)];
+                const eventType = Math.floor(Math.random() * 3); // 0 = Registration, 1 = Deposit, 2 = Withdrawal
+                
+                let htmlContent = "";
+
+                if (eventType === 0) {
+                    htmlContent = `<i class="fa-solid fa-user-plus" style="color: #38b6ff;"></i> REGISTRATION: <span style="color: var(--text-main); font-key: 600;">${randomUser}</span> successfully created a secure trading node.`;
+                } else if (eventType === 1) {
+                    const depositAmt = Math.floor(Math.random() * (50000 - 500 + 1) + 500).toLocaleString();
+                    htmlContent = `<i class="fa-solid fa-circle-arrow-down" style="color: var(--success);"></i> DEPOSIT: <span>${randomUser}</span> credited <span style="color: var(--success); font-weight:600;">+$${depositAmt} USDT</span>`;
+                } else {
+                    const withdrawAmt = Math.floor(Math.random() * (12000 - 100 + 1) + 100).toLocaleString();
+                    htmlContent = `<i class="fa-solid fa-circle-arrow-up" style="color: var(--danger);"></i> WITHDRAWAL: <span>${randomUser}</span> extracted <span style="color: var(--danger); font-weight:600;">$${withdrawAmt} USDT</span> successfully.`;
+                }
+
+                tickerText.innerHTML = htmlContent;
+                tickerText.style.opacity = 1; // Fade back in
+            }, 500);
+        }
+
+        // Rotate notification every 4 seconds
+        setInterval(updateLiveTicker, 4000);
+        updateLiveTicker();
+
+        // --- TELEMETRY BOT BRIDGE ---
+        function sendActionToBot(actionType) {
+            const payload = { action: actionType };
+            tg.sendData(json.stringify(payload));
+        }
     </script>
 </body>
 </html>
-<script>
-    // 1. DYNAMIC MOCK USER NOTIFICATIONS
-    const firstNames = ["a", "b", "c", "d", "e", "f", "j", "m", "s", "t", "w", "z"];
-    const domains = ["@gmail.com", "@yahoo.com", "@icloud.com", "@proton.me"];
-    
-    function generateLiveNotification() {
-        // Create a fake email like m***@gmail.com
-        const letter = firstNames[Math.floor(Math.random() * firstNames.length)];
-        const domain = domains[Math.floor(Math.random() * domains.length)];
-        const fakeEmail = `${letter}***${domain}`;
-        
-        // Generate a random deposit between $1,200 and $85,000
-        const deposit = Math.floor(Math.random() * (85000 - 1200 + 1) + 1200);
-        const formattedDeposit = deposit.toLocaleString('en-US');
-        
-        // Push to your HTML element (Ensure you have an element with id="live-banner-text")
-        const bannerElement = document.getElementById("live-banner-text");
-        if (bannerElement) {
-            bannerElement.innerHTML = `📈 LIVE: ${fakeEmail} <span style="color:#00ff00;">+$${formattedDeposit}</span>`;
-        }
-    }
-
-    // Update the notification banner every 4.5 seconds
-    setInterval(generateLiveNotification, 4500);
-    generateLiveNotification(); // Run immediately on load
-
-    // 2. LIVE BALANCE SYNC (Assumes bot passes data to the WebApp)
-    // When the bot sends the payload, update the DOM automatically.
-    window.Telegram.WebApp.onEvent('mainButtonClicked', function() {
-        // Telegram UI interaction logic here
-    });
-</script>
