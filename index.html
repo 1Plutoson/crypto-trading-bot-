@@ -3,43 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LENs Mobile Terminal v2</title>
+    <title>LENs Institutional Terminal Matrix v3</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-dark: #06080c; --surface: #12161f; --surface-light: #1b2230;
+            --bg-dark: #07090e; --surface: #111520; --surface-light: #1a2030;
             --primary: #f0b90b; --success: #0ecb81; --danger: #f6465d;
-            --text-main: #eaecef; --text-muted: #848e9c; --border: rgba(255,255,255,0.08);
+            --text-main: #eaecef; --text-muted: #848e9c; --border: rgba(255,255,255,0.06);
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-dark); color: var(--text-main); padding-bottom: 70px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { background: var(--bg-dark); color: var(--text-main); padding-bottom: 80px; overflow-x: hidden; }
         
-        /* Layout Views */
-        .view-section { display: none; padding: 15px; animation: fadeIn 0.3s; }
+        .view-section { display: none; padding: 15px; animation: swipeUp 0.25s ease-out; }
         .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes swipeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Top Header */
-        .top-nav { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        /* Custom UI Components */
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 15px; position: relative; }
+        .balance-label { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .balance-num { font-size: 34px; font-weight: 800; color: #fff; margin: 6px 0; font-family: monospace; }
         
-        /* Cards & Grids */
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 15px; margin-bottom: 15px; }
-        .balance-text { font-size: 32px; font-weight: 700; margin: 5px 0; font-family: monospace; }
-        
-        /* Action Buttons Grid (Deposit, Withdraw, Trade) */
-        .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .action-btn { background: var(--surface-light); border: 1px solid var(--border); border-radius: 12px; padding: 15px 5px; text-align: center; color: var(--text-main); font-size: 12px; font-weight: 600; cursor: pointer; }
-        .action-btn i { font-size: 20px; margin-bottom: 8px; display: block; color: var(--primary); }
+        /* Grid Options Configuration System */
+        .option-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 15px 0; }
+        .select-box { background: var(--surface-light); border: 1px solid var(--border); padding: 12px 5px; text-align: center; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .select-box.active { border-color: var(--primary); background: rgba(240, 185, 11, 0.08); color: var(--primary); }
 
-        /* Trading Engines */
-        .engine-card { display: flex; align-items: center; justify-content: space-between; padding: 15px; background: var(--surface-light); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
-        .engine-card.selected { border-color: var(--primary); background: rgba(240, 185, 11, 0.1); }
-        .engine-card i { font-size: 24px; width: 30px; }
-        
-        .primary-btn { width: 100%; background: var(--primary); color: #000; padding: 16px; border: none; border-radius: 12px; font-weight: 800; font-size: 15px; text-transform: uppercase; cursor: pointer; }
+        /* Dual Column Real-Time Market Widget */
+        .market-widget { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .market-column { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; height: 320px; overflow-y: auto; }
+        .column-header { font-size: 12px; font-weight: bold; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); text-transform: uppercase; position: sticky; top: 0; background: var(--surface); }
+        .ticker-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 12px; cursor: pointer; }
+        .ticker-row:hover { background: var(--surface-light); }
 
-        /* Bottom Navigation Bar */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 15px 0; z-index: 100; }
+        /* Configuration Forms inputs */
+        .input-field { width: 100%; background: var(--surface-light); border: 1px solid var(--border); padding: 14px; border-radius: 10px; color: #fff; font-size: 16px; font-weight: bold; font-family: monospace; margin-bottom: 15px; }
+        .primary-btn { width: 100%; background: var(--primary); color: #000; padding: 16px; border: none; border-radius: 12px; font-weight: 800; font-size: 14px; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
+        .primary-btn:active { transform: scale(0.98); }
+
+        /* Live TradingView Overlay Matrix Frame */
+        #tv-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; display: none; flex-direction: column; }
+        
+        /* Persistent Navigation Control Deck */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 16px; z-index: 150; }
         .nav-item { text-align: center; color: var(--text-muted); font-size: 11px; cursor: pointer; width: 25%; }
         .nav-item i { font-size: 20px; margin-bottom: 4px; display: block; }
         .nav-item.active { color: var(--primary); }
@@ -47,170 +52,283 @@
 </head>
 <body>
 
-    <div class="top-nav">
-        <div style="font-weight: 700; font-size: 16px;">LENs Mobile</div>
-        <div style="font-size: 12px; background: var(--surface-light); padding: 5px 10px; border-radius: 20px;" id="wallet-status">
-            <i class="fa-solid fa-circle-dot" style="color: var(--danger);" id="status-indicator"></i> Offline
+    <div style="background: var(--surface); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);">
+        <span style="font-weight: 800; font-size: 15px; letter-spacing: 0.5px;">LENs Terminal v3</span>
+        <div id="connection-status" style="font-size: 11px; font-weight: 700; background: rgba(246,70,93,0.1); color: var(--danger); padding: 4px 10px; border-radius: 20px;">
+            <i class="fa-solid fa-circle"></i> DISCONNECTED
         </div>
     </div>
 
     <div id="view-home" class="view-section active">
         <div class="card">
-            <div style="font-size: 12px; color: var(--text-muted);">Total Asset Value (USDT)</div>
-            <div class="balance-text" id="display-balance">$0.00</div>
-            <div style="font-size: 12px; color: var(--text-muted); display:flex; justify-content: space-between;">
-                <span>Locked Bonus: <strong style="color: #fff;">$45.00</strong></span>
-                <span>Claimable: <strong style="color: var(--success);">$5.00</strong></span>
+            <div class="balance-label">Total Asset Infrastructure</div>
+            <div class="balance-num" id="balance-main">$0.00</div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 10px; color: var(--text-muted);">
+                <span>Locked Matrix: <strong style="color: #fff;" id="bonus-pool">$0.00</strong></span>
+                <span>Claimable: <strong style="color: var(--success);" id="unlocked-bonus">$0.00</strong></span>
             </div>
         </div>
 
-        <div class="action-grid">
-            <div class="action-btn" onclick="switchNav('wallet')"><i class="fa-solid fa-arrow-down"></i> Deposit</div>
-            <div class="action-btn" onclick="alert('Withdrawals unlock after initial node verification.')"><i class="fa-solid fa-arrow-up"></i> Withdraw</div>
-            <div class="action-btn" onclick="switchNav('trade')"><i class="fa-solid fa-robot"></i> Auto Trade</div>
-        </div>
-
-        <h4 style="margin-bottom: 10px;">Market Feed</h4>
-        <div class="card" style="display: flex; justify-content: space-between;">
-            <div><strong>BTC/USDT</strong><br><small style="color:var(--text-muted)">Bitcoin</small></div>
-            <div style="text-align: right; color: var(--success);"><strong>$93,450.20</strong><br><small>+1.2%</small></div>
+        <div style="margin: 15px 0 5px 0; font-weight: 800; font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Real-Time Exchange Widget (30 Pairs)</div>
+        <div class="market-widget">
+            <div class="market-column">
+                <div class="column-header" style="color: var(--success);">🔥 Top Gainers</div>
+                <div id="gainer-slots"></div>
+            </div>
+            <div class="market-column">
+                <div class="column-header" style="color: var(--danger);">❄️ Top Losers</div>
+                <div id="loser-slots"></div>
+            </div>
         </div>
     </div>
 
     <div id="view-trade" class="view-section">
-        <h3 style="margin-top: 0;">AI Trading Engines</h3>
-        <p style="color: var(--text-muted); font-size: 13px;">Select your algorithmic greed level. Higher greed risks more capital for geometric returns.</p>
-
-        <div class="engine-card selected" id="eng-low" onclick="selectEngine('low')">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <i class="fa-solid fa-shield-halved" style="color:var(--success);"></i>
-                <div>
-                    <strong>Strong-Regular AI</strong>
-                    <div style="font-size:12px; color:var(--text-muted);">Low Greed / Safest</div>
-                </div>
+        <div id="engine-selection-screen">
+            <h4 style="margin-bottom: 15px;">Algorithmic Configuration</h4>
+            <div class="card" onclick="selectEngine('high')" style="border-left: 4px solid var(--primary);">
+                <h5>Quantum AI Trading Bot</h5>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Aggressive behavior model. High frequency algorithmic tracking (Long/Short). Target: 85% - 90% Win Rate Accuracy.</p>
             </div>
-            <i class="fa-regular fa-circle-check"></i>
+            <div class="card" onclick="selectEngine('mid')" style="border-left: 4px solid #3498db;">
+                <h5>Advanced AI Trading Bot</h5>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Moderate balance model. Yield curve scanning logic optimizations. Target: 60% - 70% Win Rate Accuracy.</p>
+            </div>
+            <div class="card" onclick="selectEngine('low')" style="border-left: 4px solid var(--success);">
+                <h5>Strong Regular AI Bot</h5>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Low risk deployment. Core rules-based statistical standard optimization tracking. Target: 50% - 65% Win Rate.</p>
+            </div>
         </div>
 
-        <div class="engine-card" id="eng-mid" onclick="selectEngine('mid')">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <i class="fa-solid fa-scale-balanced" style="color:#3498db;"></i>
-                <div>
-                    <strong>Advance AI Bot</strong>
-                    <div style="font-size:12px; color:var(--text-muted);">Mid Greed / Balanced</div>
-                </div>
+        <div id="engine-runtime-screen" style="display: none;">
+            <div style="margin-bottom: 15px; font-weight: bold; cursor: pointer; color: var(--primary);" onclick="backToEngines()"><i class="fa-solid fa-arrow-left"></i> Adjust Bot Choice</div>
+            <div class="card">
+                <h5 style="text-transform: uppercase; color: var(--primary);" id="selected-engine-title">Quantum Engine</h5>
+                <p style="font-size: 11px; color: var(--text-muted);">Set configuration rules. Target tracking asset: <span id="target-asset-label" style="color:#fff; font-weight:bold;">BTCUSDT</span></p>
             </div>
-            <i class="fa-regular fa-circle-check"></i>
-        </div>
 
-        <div class="engine-card" id="eng-high" onclick="selectEngine('high')">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <i class="fa-solid fa-bolt" style="color:var(--primary);"></i>
-                <div>
-                    <strong>Quantum AI Bot</strong>
-                    <div style="font-size:12px; color:var(--text-muted);">High Greed / Aggressive</div>
-                </div>
+            <label class="balance-label">Select Process Execution Timeline</label>
+            <div class="option-selector">
+                <div class="select-box active" onclick="setRuntime(this, '30mins')">30 Mins</div>
+                <div class="select-box" onclick="setRuntime(this, '1hr')">1 Hour</div>
+                <div class="select-box" onclick="setRuntime(this, '3hrs')">3 Hours</div>
+                <div class="select-box" onclick="setRuntime(this, '6hrs')">6 Hours</div>
+                <div class="select-box" onclick="setRuntime(this, '12hrs')">12 Hours</div>
             </div>
-            <i class="fa-regular fa-circle-check"></i>
-        </div>
 
-        <button class="primary-btn" style="margin-top:20px;" onclick="initiateAutoTrade()">Deploy Engine Matrix</button>
+            <div id="deployment-input-block" style="display: none;">
+                <label class="balance-label">Deployment Size (USDT)</label>
+                <input type="number" class="input-field" id="trade-amount-input" value="50" min="10">
+                <button class="primary-btn" onclick="commitEngineDeployment()">Execute Active Matrix</button>
+            </div>
+            <div id="deployment-denied-block" style="background: rgba(246,70,93,0.1); padding: 15px; border-radius: 12px; text-align: center; color: var(--danger); font-size: 12px; font-weight: bold;">
+                ⚠️ Execution Locked: Account configuration balance insufficient ($0.00).
+            </div>
+        </div>
     </div>
 
     <div id="view-wallet" class="view-section">
-        <h3 style="margin-top: 0;">Node Wallet Connectivity</h3>
-        <p style="color: var(--text-muted); font-size: 13px;">Generate an isolated burner wallet to receive API tokens before making transactions.</p>
+        <h3>Node Management Port</h3>
+        <button class="primary-btn" onclick="generateSecureNode()" id="node-btn" style="background: var(--surface-light); color: #fff; border: 1px solid var(--border); margin: 15px 0;">Initialize Infrastructure Node</button>
         
-        <button class="primary-btn" id="burner-btn" onclick="generateBurnerWallet()" style="background:var(--surface-light); color:var(--text-main); border:1px solid var(--border); margin-bottom:20px;">
-            <i class="fa-solid fa-fire" style="color:#ff9f43; margin-right:8px;"></i> Generate Burner Wallet
-        </button>
-
-        <h4 style="margin-bottom: 10px;">Deposit Options</h4>
-        <div class="card" style="padding: 15px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <strong><i class="fa-solid fa-coins" style="color:#f3ba2f;"></i> TRX (TRC-20)</strong>
-            </div>
-            <code style="display:block; background:var(--bg-dark); padding:10px; border-radius:6px; font-size:12px; margin-bottom:10px; word-break: break-all;">TY6q6kG9ZpXmNzYhWv7uR4K8Bv2Lp9Qs1X</code>
-            <button class="primary-btn" style="padding:10px; font-size:13px;" onclick="simulateDepositRequest()">I Have Sent Funds</button>
+        <div class="card">
+            <h5>USDT Secure Gateway Node (TRC-20)</h5>
+            <code style="display:block; background: var(--bg-dark); padding: 12px; border-radius: 8px; font-size: 11px; word-break: break-all; margin: 10px 0; border: 1px solid var(--border);">TYG7x89qWmNksPz2mAL17vKxR90PqX7z8L</code>
+            <p style="font-size: 10px; color: var(--text-muted);">Credits apply automatically via database state confirmation workers post network verification matrix checks.</p>
         </div>
     </div>
 
     <div class="bottom-nav">
-        <div class="nav-item active" id="nav-home" onclick="switchNav('home')">
-            <i class="fa-solid fa-house"></i> Home
-        </div>
-        <div class="nav-item" id="nav-trade" onclick="switchNav('trade')">
-            <i class="fa-solid fa-robot"></i> Trade
-        </div>
-        <div class="nav-item" id="nav-wallet" onclick="switchNav('wallet')">
-            <i class="fa-solid fa-wallet"></i> Assets
-        </div>
-        <div class="nav-item" onclick="alert('Contacting Support @Suvillanjames...')">
-            <i class="fa-solid fa-headset"></i> Support
-        </div>
+        <div class="nav-item active" id="btn-home" onclick="navigate('home')"><i class="fa-solid fa-chart-line"></i> Markets</div>
+        <div class="nav-item" id="btn-trade" onclick="navigate('trade')"><i class="fa-solid fa-robot"></i> Strategy</div>
+        <div class="nav-item" id="btn-wallet" onclick="navigate('wallet')"><i class="fa-solid fa-wallet"></i> Node Port</div>
     </div>
 
+    <div id="tv-modal">
+        <div style="background: var(--surface); padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <strong id="tv-asset-title">Asset Chart</strong>
+            <button onclick="closeChart()" style="background: var(--danger); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-weight: bold;">CLOSE</button>
+        </div>
+        <div id="tv-container" style="flex-grow: 1;"></div>
+    </div>
+
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <script>
-        // STATE MANAGEMENT (For API Integration)
-        let sessionToken = null;
-        let selectedGreed = 'low';
+        const API_HOST = "http://localhost:8000";
+        let jwtToken = null;
+        let currentBalance = 0.00;
+        let selectedEngine = 'high';
+        let selectedRuntime = '30mins';
+        let activeAssetPair = 'BTCUSDT';
+        let assetCache = {};
 
-        function switchNav(view) {
-            // UI Toggling
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById(`view-${view}`).classList.add('active');
+        // Top 30 Core Metrics Stream Assets Configuration List Array Map
+        const targetCryptoList = [
+            'BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT','ADAUSDT','AVAXUSDT','DOTUSDT','DOGEUSDT','LINKUSDT',
+            'SHIBUSDT','MATICUSDT','TRXUSDT','LTCUSDT','NEARUSDT','UNIUSDT','APTUSDT','FILUSDT','ICPUSDT','ATOMUSDT',
+            'VETUSDT','OPUSDT','ARBUSDT','GRTUSDT','GALAUSDT','THETAUSDT','FTMUSDT','INJUSDT','STXUSDT','RUNEUSDT'
+        ];
+
+        function navigate(target) {
+            document.querySelectorAll('.view-section').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+            document.getElementById(`view-${target}`).classList.add('active');
+            document.getElementById(`btn-${target}`).classList.add('active');
+        }
+
+        // Initialize connection logic natively streaming from Binance open endpoints Websocket layer
+        function startBinanceStream() {
+            const streamParam = targetCryptoList.map(s => `${s.toLowerCase()}@ticker`).join('/');
+            const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${streamParam}`);
             
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if(document.getElementById(`nav-${view}`)) {
-                document.getElementById(`nav-${view}`).classList.add('active');
-            }
+            ws.onopen = () => {
+                const badge = document.getElementById("connection-status");
+                badge.style.background = "rgba(14,203,129,0.1)";
+                badge.style.color = "var(--success)";
+                badge.innerHTML = `<i class="fa-solid fa-circle"></i> NODE SYNCED`;
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const asset = data.s;
+                const price = parseFloat(data.c).toFixed(2);
+                const percent = parseFloat(data.P).toFixed(2);
+                
+                assetCache[asset] = { asset, price, percent };
+                renderMarketMatrix();
+            };
         }
 
-        function selectEngine(level) {
-            document.querySelectorAll('.engine-card').forEach(el => el.classList.remove('selected'));
-            document.getElementById(`eng-${level}`).classList.add('selected');
-            selectedGreed = level;
-        }
-
-        // --- API INTEGRATION LOGIC ---
-
-        async function generateBurnerWallet() {
-            // In a real app, this calls the FastAPI backend: POST /api/wallet/burner
-            // Mocking the API response for frontend functionality:
-            alert("Contacting API Gateway...");
-            setTimeout(() => {
-                sessionToken = "jwt_mock_token_12345";
-                document.getElementById("status-indicator").style.color = "var(--success)";
-                document.getElementById("wallet-status").innerHTML = `<i class="fa-solid fa-circle-dot" style="color: var(--success);"></i> Node Connected`;
-                document.getElementById("burner-btn").innerText = "Burner Wallet Active";
-                document.getElementById("burner-btn").disabled = true;
-                alert("✅ Burner wallet generated. Session secured via JWT.");
-            }, 1000);
-        }
-
-        async function initiateAutoTrade() {
-            if (!sessionToken) {
-                alert("❌ Connection Error: You must generate a Burner Wallet first to get an API session token.");
-                switchNav('wallet');
-                return;
-            }
+        function renderMarketMatrix() {
+            const assets = Object.values(assetCache);
+            // Sort models
+            const gainers = [...assets].sort((a,b) => b.percent - a.percent);
+            const losers = [...assets].sort((a,b) => a.percent - b.percent);
             
-            // Simulating: POST /api/trade/auto
-            alert(`Deploying ${selectedGreed.toUpperCase()} greed engine via API securely...`);
-            setTimeout(() => {
-                alert(`✅ Trade initialized. The AI is now scanning the market.`);
-                switchNav('home');
-            }, 1500);
+            document.getElementById("gainer-slots").innerHTML = gainers.slice(0, 15).map(a => `
+                <div class="ticker-row" onclick="launchChart('${a.asset}')">
+                    <strong>${a.asset.replace('USDT','')}</strong>
+                    <span style="color:var(--success); font-family:monospace;">${a.percent}%</span>
+                </div>
+            `).join('');
+
+            document.getElementById("loser-slots").innerHTML = losers.slice(0, 15).map(a => `
+                <div class="ticker-row" onclick="launchChart('${a.asset}')">
+                    <strong>${a.asset.replace('USDT','')}</strong>
+                    <span style="color:var(--danger); font-family:monospace;">${a.percent}%</span>
+                </div>
+            `).join('');
         }
 
-        async function simulateDepositRequest() {
-            if (!sessionToken) {
-                alert("❌ Security Error: No active session. Generate a Burner Wallet first.");
-                return;
-            }
-            // Simulating: POST /api/wallet/deposit
-            alert("Deposit validation sent to API Gateway. Awaiting blockchain confirmation... (Simulated)");
+        function launchChart(symbol) {
+            activeAssetPair = symbol;
+            document.getElementById("tv-asset-title").innerText = `${symbol} Institutional Feed`;
+            document.getElementById("tv-modal").style.display = "flex";
+            
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": `BINANCE:${symbol}`,
+                "interval": "15",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "container_id": "tv-container",
+                "hide_side_toolbar": false,
+                "allow_symbol_change": true
+            });
         }
+
+        function closeChart() {
+            document.getElementById("tv-modal").style.display = "none";
+        }
+
+        async function fetchSystemState() {
+            if(!jwtToken) return;
+            try {
+                const res = await fetch(`${API_HOST}/api/wallet/state`, {
+                    headers: { "Authorization": `Bearer ${jwtToken}` }
+                });
+                const data = await res.json();
+                currentBalance = data.main_balance;
+                document.getElementById("balance-main").innerText = `$${currentBalance.toFixed(2)}`;
+                document.getElementById("bonus-pool").innerText = `$${data.bonus_pool.toFixed(2)}`;
+                document.getElementById("unlocked-bonus").innerText = `$${data.unlocked_bonus.toFixed(2)}`;
+            } catch(e) { console.error("Identity context refresh dropped."); }
+        }
+
+        async function generateSecureNode() {
+            const res = await fetch(`${API_HOST}/api/wallet/burner`, { method: "POST" });
+            const data = await res.json();
+            jwtToken = data.token;
+            document.getElementById("node-btn").innerText = "Infrastructure Node Live";
+            document.getElementById("node-btn").disabled = true;
+            await fetchSystemState();
+            alert("Secure Cryptographic Tenant Session Token Issued via Gateway Core Matrix.");
+        }
+
+        function selectEngine(type) {
+            selectedEngine = type;
+            const titles = { 'high': 'Quantum AI Engine', 'mid': 'Advanced AI Engine', 'low': 'Strong Regular Engine' };
+            document.getElementById("selected-engine-title").innerText = titles[type];
+            document.getElementById("target-asset-label").innerText = activeAssetPair;
+            
+            document.getElementById("engine-selection-screen").style.display = "none";
+            document.getElementById("engine-runtime-screen").style.display = "block";
+            
+            // Operational runtime constraint toggle check rules
+            if(currentBalance > 0) {
+                document.getElementById("deployment-input-block").style.display = "block";
+                document.getElementById("deployment-denied-block").style.display = "none";
+            } else {
+                document.getElementById("deployment-input-block").style.display = "none";
+                document.getElementById("deployment-denied-block").style.display = "block";
+                document.getElementById("deployment-denied-block").innerText = `⚠️ Execution Locked: Account deployment balance insufficient ($${currentBalance.toFixed(2)}).`;
+            }
+        }
+
+        function backToEngines() {
+            document.getElementById("engine-selection-screen").style.display = "block";
+            document.getElementById("engine-runtime-screen").style.display = "none";
+        }
+
+        function setRuntime(element, option) {
+            document.querySelectorAll('.select-box').forEach(e => e.classList.remove('active'));
+            element.classList.add('active');
+            selectedRuntime = option;
+        }
+
+        async function commitEngineDeployment() {
+            const size = parseFloat(document.getElementById("trade-amount-input").value);
+            if(size > currentBalance) { alert("Execution Error: Limits exceeded."); return; }
+            
+            try {
+                const res = await fetch(`${API_HOST}/api/trade/deploy`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        greed_level: selectedEngine,
+                        asset: activeAssetPair,
+                        amount: size,
+                        runtime_options: selectedRuntime
+                    })
+                });
+                const data = await res.json();
+                alert(data.message);
+                await fetchSystemState();
+                backToEngines();
+                navigate('home');
+            } catch(e) { alert("Matrix process thread tracking error."); }
+        }
+
+        // Main entry execution frame
+        window.addEventListener('load', () => {
+            startBinanceStream();
+            // Regularly update balance history status fields
+            setInterval(fetchSystemState, 4000);
+        });
     </script>
 </body>
 </html>
