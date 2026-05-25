@@ -5,3 +5,8 @@ python-telegram-bot
 web3
 cryptography
 eth-account
+fastapi
+uvicorn
+pyjwt
+
+
