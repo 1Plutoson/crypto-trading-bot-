@@ -2,270 +2,215 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LENs -CRYPTO_LLC | Web3 Terminal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LENs Mobile Terminal v2</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-main: #06080c;
-            --surface: #12161f;
-            --surface-hover: #1b2230;
-            --border: rgba(255, 255, 255, 0.07);
-            --primary: #f0b90b;
-            --success: #0ecb81;
-            --danger: #f6465d;
-            --text-main: #eaecef;
-            --text-muted: #848e9c;
+            --bg-dark: #06080c; --surface: #12161f; --surface-light: #1b2230;
+            --primary: #f0b90b; --success: #0ecb81; --danger: #f6465d;
+            --text-main: #eaecef; --text-muted: #848e9c; --border: rgba(255,255,255,0.08);
         }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            margin: 0; padding: 0;
-        }
-
-        /* View Switching Logic */
-        .app-view { display: none; padding: 20px; max-width: 480px; margin: 0 auto; }
-        .app-view.active { display: block; }
-
-        /* Navigation Header */
-        .header-nav {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 20px; border-bottom: 1px solid var(--border); background: #0b0e14;
-        }
-        .menu-toggle { font-size: 20px; cursor: pointer; color: var(--text-main); }
-
-        /* Sidebar Drawer Styling */
-        .nav-drawer {
-            position: fixed; top: 0; left: -280px; width: 260px; height: 100%;
-            background: var(--surface); border-right: 1px solid var(--border);
-            z-index: 1000; transition: left 0.25s ease; padding: 20px;
-        }
-        .nav-drawer.open { left: 0; }
-        .drawer-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 999; display: none;
-        }
-        .drawer-overlay.active { display: block; }
-        .drawer-item {
-            display: flex; align-items: center; gap: 15px; padding: 12px 10px;
-            color: var(--text-main); text-decoration: none; border-radius: 8px; cursor: pointer;
-            margin-bottom: 5px; font-weight: 500;
-        }
-        .drawer-item:hover { background: var(--surface-hover); }
-        .drawer-item i { color: var(--primary); width: 20px; }
-
-        /* Premium Interface Cards */
-        .crypto-card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 16px; padding: 20px; margin-bottom: 15px;
-        }
-        .balance-num { font-size: 34px; font-weight: 700; margin: 8px 0; font-family: monospace; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-dark); color: var(--text-main); padding-bottom: 70px; }
         
-        /* Interactive Search Engine Box */
-        .search-box {
-            position: relative; margin-bottom: 15px;
-        }
-        .search-box input {
-            width: 100%; background: #161a25; border: 1px solid var(--border);
-            padding: 12px 12px 12px 40px; box-sizing: border-box; border-radius: 10px;
-            color: var(--text-main); font-size: 14px;
-        }
-        .search-box i { position: absolute; left: 15px; top: 15px; color: var(--text-muted); }
+        /* Layout Views */
+        .view-section { display: none; padding: 15px; animation: fadeIn 0.3s; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Scrollable List Constraints */
-        .scroll-list {
-            max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-            padding-right: 4px;
-        }
-        .scroll-list::-webkit-scrollbar { width: 4px; }
-        .scroll-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        /* Top Header */
+        .top-nav { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        
+        /* Cards & Grids */
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 15px; margin-bottom: 15px; }
+        .balance-text { font-size: 32px; font-weight: 700; margin: 5px 0; font-family: monospace; }
+        
+        /* Action Buttons Grid (Deposit, Withdraw, Trade) */
+        .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .action-btn { background: var(--surface-light); border: 1px solid var(--border); border-radius: 12px; padding: 15px 5px; text-align: center; color: var(--text-main); font-size: 12px; font-weight: 600; cursor: pointer; }
+        .action-btn i { font-size: 20px; margin-bottom: 8px; display: block; color: var(--primary); }
 
-        .list-item {
-            background: #161a25; border: 1px solid var(--border); border-radius: 10px;
-            padding: 12px; display: flex; justify-content: space-between; align-items: center;
-        }
+        /* Trading Engines */
+        .engine-card { display: flex; align-items: center; justify-content: space-between; padding: 15px; background: var(--surface-light); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
+        .engine-card.selected { border-color: var(--primary); background: rgba(240, 185, 11, 0.1); }
+        .engine-card i { font-size: 24px; width: 30px; }
+        
+        .primary-btn { width: 100%; background: var(--primary); color: #000; padding: 16px; border: none; border-radius: 12px; font-weight: 800; font-size: 15px; text-transform: uppercase; cursor: pointer; }
 
-        /* Wallet Selector Layout */
-        .wallet-option {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 14px; background: #161a25; border: 1px solid var(--border);
-            border-radius: 12px; margin-bottom: 10px; cursor: pointer;
-        }
-        .wallet-option:hover { border-color: var(--primary); }
-
-        /* General UI Elements */
-        .action-button {
-            width: 100%; background: var(--primary); color: #000; border: none;
-            padding: 14px; border-radius: 10px; font-weight: 700; cursor: pointer;
-            font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .action-button:hover { opacity: 0.9; }
-        .crypto-badge { font-size: 11px; font-weight: bold; background: var(--surface-hover); padding: 4px 8px; border-radius: 6px; }
+        /* Bottom Navigation Bar */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 15px 0; z-index: 100; }
+        .nav-item { text-align: center; color: var(--text-muted); font-size: 11px; cursor: pointer; width: 25%; }
+        .nav-item i { font-size: 20px; margin-bottom: 4px; display: block; }
+        .nav-item.active { color: var(--primary); }
     </style>
 </head>
 <body>
 
-    <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
-
-    <div class="nav-drawer" id="drawer">
-        <h3 style="color: var(--primary); margin-top: 10px; margin-bottom: 25px;">LENs MANAGEMENT</h3>
-        <div class="drawer-item" onclick="switchView('dashboard')"><i class="fa-solid fa-chart-line"></i> Dashboard</div>
-        <div class="drawer-item" onclick="switchView('deposit-panel')"><i class="fa-solid fa-wallet"></i> Fund Node</div>
-        <div class="drawer-item" onclick="switchView('positions')"><i class="fa-solid fa-money-bill-trend-up"></i> Active Trades</div>
-        <div class="drawer-item" onclick="switchView('wallet-connect')"><i class="fa-solid fa-link"></i> Custody Link</div>
-        <div class="drawer-item" onclick="switchView('admin-view')"><i class="fa-solid fa-user-gear"></i> Portal Audit</div>
-        <a href="https://t.me/Suvillanjames" target="_blank" class="drawer-item" style="text-decoration: none;">
-            <i class="fa-solid fa-headset"></i> Support Desk
-        </a>
+    <div class="top-nav">
+        <div style="font-weight: 700; font-size: 16px;">LENs Mobile</div>
+        <div style="font-size: 12px; background: var(--surface-light); padding: 5px 10px; border-radius: 20px;" id="wallet-status">
+            <i class="fa-solid fa-circle-dot" style="color: var(--danger);" id="status-indicator"></i> Offline
+        </div>
     </div>
 
-    <div class="header-nav">
-        <i class="fa-solid fa-bars-staggered menu-toggle" onclick="toggleDrawer()"></i>
-        <span style="font-weight: 700; font-size: 14px; letter-spacing: 0.5px;">LENs -CRYPTO_LLC</span>
-        <i class="fa-solid fa-circle-nodes" style="color: var(--primary);"></i>
-    </div>
-
-    <div id="dashboard" class="app-view active">
-        <div class="crypto-card">
-            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Isolated Node Asset Capital</div>
-            <div class="balance-num" id="user-main-bal">$0.00</div>
-            <div style="font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; margin-top: 10px;">
-                <span>Claimed Allocation: <strong style="color: var(--success);">$0.00</strong></span>
-                <span>Active Vault Bonus: <strong id="user-bonus-bal">$50.00</strong></span>
+    <div id="view-home" class="view-section active">
+        <div class="card">
+            <div style="font-size: 12px; color: var(--text-muted);">Total Asset Value (USDT)</div>
+            <div class="balance-text" id="display-balance">$0.00</div>
+            <div style="font-size: 12px; color: var(--text-muted); display:flex; justify-content: space-between;">
+                <span>Locked Bonus: <strong style="color: #fff;">$45.00</strong></span>
+                <span>Claimable: <strong style="color: var(--success);">$5.00</strong></span>
             </div>
         </div>
 
-        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; font-weight: 600;">High-Frequency Index (30+ Asset Matrix)</div>
-        <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="market-search" placeholder="Filter asset symbols..." oninput="filterMarketAssets()">
+        <div class="action-grid">
+            <div class="action-btn" onclick="switchNav('wallet')"><i class="fa-solid fa-arrow-down"></i> Deposit</div>
+            <div class="action-btn" onclick="alert('Withdrawals unlock after initial node verification.')"><i class="fa-solid fa-arrow-up"></i> Withdraw</div>
+            <div class="action-btn" onclick="switchNav('trade')"><i class="fa-solid fa-robot"></i> Auto Trade</div>
         </div>
 
-        <div class="scroll-list" id="market-matrix">
-            </div>
+        <h4 style="margin-bottom: 10px;">Market Feed</h4>
+        <div class="card" style="display: flex; justify-content: space-between;">
+            <div><strong>BTC/USDT</strong><br><small style="color:var(--text-muted)">Bitcoin</small></div>
+            <div style="text-align: right; color: var(--success);"><strong>$93,450.20</strong><br><small>+1.2%</small></div>
+        </div>
     </div>
 
-    <div id="deposit-panel" class="app-view">
-        <h3 style="margin-top: 0;">Node Deposit Provisioning</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Select your source ledger routing token address. Any transaction verified over $20 triggers automatic 5% allocations from the bonus matrix.</p>
+    <div id="view-trade" class="view-section">
+        <h3 style="margin-top: 0;">AI Trading Engines</h3>
+        <p style="color: var(--text-muted); font-size: 13px;">Select your algorithmic greed level. Higher greed risks more capital for geometric returns.</p>
+
+        <div class="engine-card selected" id="eng-low" onclick="selectEngine('low')">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <i class="fa-solid fa-shield-halved" style="color:var(--success);"></i>
+                <div>
+                    <strong>Strong-Regular AI</strong>
+                    <div style="font-size:12px; color:var(--text-muted);">Low Greed / Safest</div>
+                </div>
+            </div>
+            <i class="fa-regular fa-circle-check"></i>
+        </div>
+
+        <div class="engine-card" id="eng-mid" onclick="selectEngine('mid')">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <i class="fa-solid fa-scale-balanced" style="color:#3498db;"></i>
+                <div>
+                    <strong>Advance AI Bot</strong>
+                    <div style="font-size:12px; color:var(--text-muted);">Mid Greed / Balanced</div>
+                </div>
+            </div>
+            <i class="fa-regular fa-circle-check"></i>
+        </div>
+
+        <div class="engine-card" id="eng-high" onclick="selectEngine('high')">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <i class="fa-solid fa-bolt" style="color:var(--primary);"></i>
+                <div>
+                    <strong>Quantum AI Bot</strong>
+                    <div style="font-size:12px; color:var(--text-muted);">High Greed / Aggressive</div>
+                </div>
+            </div>
+            <i class="fa-regular fa-circle-check"></i>
+        </div>
+
+        <button class="primary-btn" style="margin-top:20px;" onclick="initiateAutoTrade()">Deploy Engine Matrix</button>
+    </div>
+
+    <div id="view-wallet" class="view-section">
+        <h3 style="margin-top: 0;">Node Wallet Connectivity</h3>
+        <p style="color: var(--text-muted); font-size: 13px;">Generate an isolated burner wallet to receive API tokens before making transactions.</p>
         
-        <div class="crypto-card" style="padding: 15px; background: #161a25;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                <span><i class="fa-solid fa-coins" style="color:#f3ba2f; margin-right:8px;"></i> Tron Ledger (TRX)</span>
-                <span class="crypto-badge">TRC-20</span>
+        <button class="primary-btn" id="burner-btn" onclick="generateBurnerWallet()" style="background:var(--surface-light); color:var(--text-main); border:1px solid var(--border); margin-bottom:20px;">
+            <i class="fa-solid fa-fire" style="color:#ff9f43; margin-right:8px;"></i> Generate Burner Wallet
+        </button>
+
+        <h4 style="margin-bottom: 10px;">Deposit Options</h4>
+        <div class="card" style="padding: 15px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <strong><i class="fa-solid fa-coins" style="color:#f3ba2f;"></i> TRX (TRC-20)</strong>
             </div>
-            <code style="display:block; background:#0b0e14; padding:10px; border-radius:6px; font-size:12px; color:var(--primary); word-break:break-all;">TY6q6kG9ZpXmNzYhWv7uR4K8Bv2Lp9Qs1X</code>
-            <button class="action-button" style="padding: 8px; font-size:12px; margin-top:10px;" onclick="logDepositAction('TRX')">I Have Sent Funds</button>
-        </div>
-
-        <div class="crypto-card" style="padding: 15px; background: #161a25;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                <span><i class="fa-solid fa-cube" style="color:#f0b90b; margin-right:8px;"></i> Binance Smart Chain (BNB)</span>
-                <span class="crypto-badge">BEP-20</span>
-            </div>
-            <code style="display:block; background:#0b0e14; padding:10px; border-radius:6px; font-size:12px; color:var(--primary); word-break:break-all;">0x71C7656EC7ab88b098defB751B7401B5f6d14503</code>
-            <button class="action-button" style="padding: 8px; font-size:12px; margin-top:10px;" onclick="logDepositAction('BNB')">I Have Sent Funds</button>
+            <code style="display:block; background:var(--bg-dark); padding:10px; border-radius:6px; font-size:12px; margin-bottom:10px; word-break: break-all;">TY6q6kG9ZpXmNzYhWv7uR4K8Bv2Lp9Qs1X</code>
+            <button class="primary-btn" style="padding:10px; font-size:13px;" onclick="simulateDepositRequest()">I Have Sent Funds</button>
         </div>
     </div>
 
-    <div id="wallet-connect" class="app-view">
-        <h3 style="margin-top: 0;">Self-Custodial Connection Node</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Link authorized decentralised wallet structures directly via secure provider abstraction layers.</p>
-        
-        <div class="wallet-option" onclick="establishCustody('Bitget Wallet')">
-            <span style="font-weight: 600;"><i class="fa-solid fa-wallet" style="color:#0ecb81; margin-right:10px;"></i> Bitget Wallet Protocol</span>
-            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>
+    <div class="bottom-nav">
+        <div class="nav-item active" id="nav-home" onclick="switchNav('home')">
+            <i class="fa-solid fa-house"></i> Home
         </div>
-        <div class="wallet-option" onclick="establishCustody('OKX Wallet Matrix')">
-            <span style="font-weight: 600;"><i class="fa-solid fa-shield-halved" style="color:#eaecef; margin-right:10px;"></i> OKX Custodial Engine</span>
-            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>
+        <div class="nav-item" id="nav-trade" onclick="switchNav('trade')">
+            <i class="fa-solid fa-robot"></i> Trade
         </div>
-    </div>
-
-    <div id="positions" class="app-view">
-        <h3 style="margin-top:0;">Autonomous Strategy Positions</h3>
-        <div class="crypto-card" style="text-align:center; padding:40px 20px; color:var(--text-muted);">
-            <i class="fa-solid fa-hourglass-start" style="font-size:32px; margin-bottom:15px; color:var(--primary);"></i>
-            <div style="font-size:14px;">No automated algorithmic positions currently active.</div>
+        <div class="nav-item" id="nav-wallet" onclick="switchNav('wallet')">
+            <i class="fa-solid fa-wallet"></i> Assets
         </div>
-    </div>
-
-    <div id="admin-view" class="app-view">
-        <h3 style="margin-top: 0; color: var(--danger);">Administrative Ledger Isolation Audit</h3>
-        <p style="color:var(--text-muted); font-size:12px;">Private monitoring environment for auditing localized database states and user execution records.</p>
-        <div class="crypto-card" style="background:#161a25; font-size:13px; font-family:monospace;">
-            <div>[NODE-AUDIT] Context System Isolation: ACTIVE</div>
-            <div>[ROUTING] Data Isolation Layer: STABLE</div>
-            <div style="color:var(--success); margin-top:5px;">[DEPOSITS] Listening to active mainnet pools...</div>
+        <div class="nav-item" onclick="alert('Contacting Support @Suvillanjames...')">
+            <i class="fa-solid fa-headset"></i> Support
         </div>
     </div>
 
     <script>
-        // COMPREHENSIVE 30+ ASSET LIST ARRAY FOR SYSTEM EXCHANGE SIMULATION
-        const rawTokens = [
-            { s: "BTC", n: "Bitcoin", p: 93450.20 }, { s: "ETH", n: "Ethereum", p: 3340.15 },
-            { s: "BNB", n: "BNB", p: 610.45 }, { s: "SOL", n: "Solana", p: 178.20 },
-            { s: "XRP", n: "Ripple", p: 1.14 }, { s: "ADA", n: "Cardano", p: 0.58 },
-            { s: "AVAX", n: "Avalanche", p: 34.50 }, { s: "DOT", n: "Polkadot", p: 6.20 },
-            { s: "MATIC", n: "Polygon", p: 0.65 }, { s: "LINK", n: "Chainlink", p: 18.10 },
-            { s: "TRX", n: "TRON", p: 0.22 }, { s: "LTC", n: "Litecoin", p: 88.40 },
-            { s: "NEAR", n: "Near Protocol", p: 6.75 }, { s: "UNI", n: "Uniswap", p: 9.15 },
-            { s: "APT", n: "Aptos", p: 11.40 }, { s: "SUI", n: "Sui Network", p: 1.85 },
-            { s: "ICP", n: "Internet Computer", p: 12.10 }, { s: "FIL", n: "Filecoin", p: 5.40 },
-            { s: "OP", n: "Optimism", p: 2.80 }, { s: "ARB", n: "Arbitrum", p: 1.15 },
-            { s: "ATOM", n: "Cosmos", p: 8.30 }, { s: "IMX", n: "Immutable", p: 2.10 },
-            { s: "FTM", n: "Fantom", p: 0.78 }, { s: "GRT", n: "The Graph", p: 0.28 },
-            { s: "THETA", n: "Theta Network", p: 2.15 }, { s: "STX", n: "Stacks", p: 1.95 },
-            { s: "ALGO", n: "Algorand", p: 0.19 }, { s: "EGLD", n: "MultiversX", p: 38.20 },
-            { s: "AAVE", n: "Aave", p: 142.60 }, { s: "FLOW", n: "Flow", p: 0.92 }
-        ];
+        // STATE MANAGEMENT (For API Integration)
+        let sessionToken = null;
+        let selectedGreed = 'low';
 
-        function toggleDrawer() {
-            document.getElementById("drawer").classList.toggle("open");
-            document.getElementById("overlay").classList.toggle("active");
+        function switchNav(view) {
+            // UI Toggling
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${view}`).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if(document.getElementById(`nav-${view}`)) {
+                document.getElementById(`nav-${view}`).classList.add('active');
+            }
         }
 
-        function switchView(viewId) {
-            document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            toggleDrawer();
+        function selectEngine(level) {
+            document.querySelectorAll('.engine-card').forEach(el => el.classList.remove('selected'));
+            document.getElementById(`eng-${level}`).classList.add('selected');
+            selectedGreed = level;
         }
 
-        function compileMarketGrid(data) {
-            const container = document.getElementById("market-matrix");
-            container.innerHTML = "";
-            data.forEach(token => {
-                container.innerHTML += `
-                    <div class="list-item">
-                        <div>
-                            <strong style="color:#fff;">${token.s} / USDT</strong>
-                            <div style="font-size:11px; color:var(--text-muted);">${token.n}</div>
-                        </div>
-                        <div style="text-align:right; font-family:monospace; font-weight:700;">
-                            <div>$${token.p.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                        </div>
-                    </div>`;
-            });
+        // --- API INTEGRATION LOGIC ---
+
+        async function generateBurnerWallet() {
+            // In a real app, this calls the FastAPI backend: POST /api/wallet/burner
+            // Mocking the API response for frontend functionality:
+            alert("Contacting API Gateway...");
+            setTimeout(() => {
+                sessionToken = "jwt_mock_token_12345";
+                document.getElementById("status-indicator").style.color = "var(--success)";
+                document.getElementById("wallet-status").innerHTML = `<i class="fa-solid fa-circle-dot" style="color: var(--success);"></i> Node Connected`;
+                document.getElementById("burner-btn").innerText = "Burner Wallet Active";
+                document.getElementById("burner-btn").disabled = true;
+                alert("✅ Burner wallet generated. Session secured via JWT.");
+            }, 1000);
         }
 
-        function filterMarketAssets() {
-            const query = document.getElementById("market-search").value.toUpperCase();
-            const filtered = rawTokens.filter(t => t.s.includes(query) || t.n.toUpperCase().includes(query));
-            compileMarketGrid(filtered);
+        async function initiateAutoTrade() {
+            if (!sessionToken) {
+                alert("❌ Connection Error: You must generate a Burner Wallet first to get an API session token.");
+                switchNav('wallet');
+                return;
+            }
+            
+            // Simulating: POST /api/trade/auto
+            alert(`Deploying ${selectedGreed.toUpperCase()} greed engine via API securely...`);
+            setTimeout(() => {
+                alert(`✅ Trade initialized. The AI is now scanning the market.`);
+                switchNav('home');
+            }, 1500);
         }
 
-        function establishCustody(walletName) {
-            alert(`Redirecting protocol request to decentralized ${walletName} application gateway layer.`);
+        async function simulateDepositRequest() {
+            if (!sessionToken) {
+                alert("❌ Security Error: No active session. Generate a Burner Wallet first.");
+                return;
+            }
+            // Simulating: POST /api/wallet/deposit
+            alert("Deposit validation sent to API Gateway. Awaiting blockchain confirmation... (Simulated)");
         }
-
-        function logDepositAction(symbol) {
-            alert(`[TELEMETRY] Native blockchain verification signal initialized for asset stream: ${symbol}. Balance ledger adjustments queue automatically post validation.`);
-        }
-
-        // Initialize App State Elements
-        compileMarketGrid(rawTokens);
     </script>
 </body>
 </html>
