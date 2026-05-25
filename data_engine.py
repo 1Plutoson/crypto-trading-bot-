@@ -1,33 +1,44 @@
 import os
+import time
+import uuid
 import asyncio
 import logging
 import sqlite3
+import jwt
 from datetime import datetime
+from fastapi import FastAPI, Depends, HTTPException, Header
+from pydantic import BaseModel
+import uvicorn
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-# Enforce strict logging for all system events
+# ==========================================
+# 1. SYSTEM CONFIGURATION & LOGGING
+# ==========================================
 logging.basicConfig(
     format='%(asctime)s - [LENs-CORE] - %(levelname)s - %(message)s', 
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# STRICT ACCESS CONTROL
+# Security Constants
 ADMIN_ID = 6546954770
 DB_FILE = "lens_secure_vault.db"
+SECRET_KEY = "lens_institutional_secure_key_override" # Use .env for production
+ALGORITHM = "HS256"
 
+# Initialize FastAPI App
+app = FastAPI(title="LENs Core Unified Gateway", version="3.0")
+
+# ==========================================
+# 2. MULTI-TENANT DATABASE SCHEMA
+# ==========================================
 def init_secure_db():
-    """
-    Initializes a relational, multi-tenant database schema.
-    Enforces Foreign Key constraints for strict data isolation.
-    """
     conn = sqlite3.connect(DB_FILE)
-    # Enable foreign key enforcement in SQLite
     conn.execute("PRAGMA foreign_keys = ON;")
     c = conn.cursor()
     
-    # 1. Isolated User Identity Table
+    # Isolated User Identity
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id TEXT PRIMARY KEY,
@@ -36,19 +47,19 @@ def init_secure_db():
         )
     """)
     
-    # 2. Strict Wallet State Table (Bound to User)
+    # Strict Wallet State
     c.execute("""
         CREATE TABLE IF NOT EXISTS wallets (
             wallet_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT,
             main_balance REAL DEFAULT 0.00,
             bonus_pool REAL DEFAULT 45.00,
-            unlocked_bonus REAL DEFAULT 5.00,
+            unlocked_bonus REAL DEFAULT 0.00,
             FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
         )
     """)
     
-    # 3. Immutable Security Audit Ledger
+    # Immutable Security Ledger
     c.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (
             log_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,27 +69,130 @@ def init_secure_db():
         )
     """)
     
-    # Inject simulated baseline data if empty (for admin dashboard functionality)
+    # Initial Baseline Data Check
     c.execute("SELECT COUNT(*) FROM users")
     if c.fetchone()[0] == 0:
-        c.execute("INSERT INTO users (user_id, status) VALUES (?, ?)", ("mock_user_1", "active"))
-        c.execute("INSERT INTO users (user_id, status) VALUES (?, ?)", ("mock_user_2", "inactive"))
-        c.execute("INSERT INTO wallets (user_id, main_balance) VALUES (?, ?)", ("mock_user_1", 320.50))
-        
-        # Log the initialization securely
         c.execute("INSERT INTO audit_logs (event_type, description) VALUES (?, ?)", 
-                  ("SYSTEM_INIT", "Core multi-tenant database generated and encrypted."))
+                  ("SYSTEM_INIT", "Unified multi-tenant database initialized and secured."))
     
     conn.commit()
     conn.close()
     logger.info("Database schema verified and secured.")
 
-# --- ZERO-TRUST SECURITY DECORATOR ---
+# ==========================================
+# 3. FASTAPI GATEWAY (WEBAPP BACKEND)
+# ==========================================
+class TradeRequest(BaseModel):
+    greed_level: str
+    asset: str
+
+class DepositRequest(BaseModel):
+    amount: float
+    asset: str
+
+def verify_jwt(authorization: str = Header(None)):
+    """Middleware to enforce strict tenant isolation via JWT."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header.")
+    
+    token = authorization.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload["user_id"]
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session expired.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Cryptographic signature invalid.")
+
+@app.post("/api/wallet/burner")
+async def create_burner_wallet():
+    """Creates an isolated user account and issues a secure JWT."""
+    user_id = f"lens_node_{uuid.uuid4().hex[:8]}"
+    
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO users (user_id) VALUES (?)", (user_id,))
+        c.execute("INSERT INTO wallets (user_id) VALUES (?)", (user_id,))
+        c.execute("INSERT INTO audit_logs (event_type, description) VALUES (?, ?)", 
+                  ("NEW_NODE", f"Burner wallet generated for ID: {user_id}"))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Ledger allocation failed.")
+    finally:
+        conn.close()
+
+    # Issue 24-hour token
+    payload = {"user_id": user_id, "exp": time.time() + 86400}
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    
+    return {"status": "success", "user_id": user_id, "token": token}
+
+@app.post("/api/trade/auto")
+async def process_auto_trade(request: TradeRequest, user_id: str = Depends(verify_jwt)):
+    """Routes the AI trading engine request."""
+    engines = {"low": "Strong-Regular AI", "mid": "Advance AI", "high": "Quantum AI"}
+    
+    selected = engines.get(request.greed_level)
+    if not selected:
+        raise HTTPException(status_code=400, detail="Invalid Greed Engine.")
+    
+    # Log trade request securely
+    conn = sqlite3.connect(DB_FILE)
+    conn.execute("INSERT INTO audit_logs (event_type, description) VALUES (?, ?)", 
+                 ("TRADE_INIT", f"User {user_id} deployed {selected} on {request.asset}"))
+    conn.commit()
+    conn.close()
+
+    return {"status": "active", "message": f"{selected} successfully deployed on {request.asset}."}
+
+@app.post("/api/wallet/deposit")
+async def process_deposit(request: DepositRequest, user_id: str = Depends(verify_jwt)):
+    """Handles the 5% bonus unlock logic securely."""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    # 1. Fetch current wallet state safely
+    c.execute("SELECT main_balance, bonus_pool, unlocked_bonus FROM wallets WHERE user_id = ?", (user_id,))
+    wallet = c.fetchone()
+    if not wallet:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Wallet state not found.")
+        
+    main_bal, bonus_pool, unlocked_bonus = wallet
+    
+    # 2. Process logic
+    new_main = main_bal + request.amount
+    msg = f"Deposit of ${request.amount} confirmed."
+    
+    if request.amount >= 20.00 and bonus_pool > 0:
+        unlock_amount = bonus_pool * 0.05
+        bonus_pool -= unlock_amount
+        unlocked_bonus += unlock_amount
+        msg += f" 5% Bonus (${unlock_amount:.2f}) Unlocked!"
+        
+    # 3. Commit isolated changes
+    c.execute("""
+        UPDATE wallets SET main_balance = ?, bonus_pool = ?, unlocked_bonus = ? WHERE user_id = ?
+    """, (new_main, bonus_pool, unlocked_bonus, user_id))
+    
+    c.execute("INSERT INTO audit_logs (event_type, description) VALUES (?, ?)", 
+              ("DEPOSIT", f"User {user_id} deposited {request.amount} {request.asset}"))
+    
+    conn.commit()
+    conn.close()
+    
+    return {"status": "success", "message": msg}
+
+# ==========================================
+# 4. TELEGRAM ADMIN CONTROLLER
+# ==========================================
 def admin_only(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
         if update.effective_user.id != ADMIN_ID:
             logger.warning(f"UNAUTHORIZED ACCESS ATTEMPT BY ID: {update.effective_user.id}")
-            return # Silent drop for unauthorized users (Standard security practice)
+            return
         return await func(update, context, *args, **kwargs)
     return wrapper
 
@@ -86,108 +200,76 @@ def admin_only(func):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
         "🛡️ **LENs SECURE COMMAND CENTER** 🛡️\n\n"
-        "Connection Verified. Zero-Trust protocols active.\n\n"
-        "🛠️ **System Operations:**\n"
-        "📊 `/stats` - Multi-Tenant Platform Telemetry\n"
-        "🔐 `/audit` - View Immutable Security Ledger\n"
-        "🧠 `/diagnostics` - System Integrity Check\n"
-        "🧹 `/reconcile` - Clear Cache & Rebuild Indexes"
+        "API Gateway and Admin Nodes Online.\n"
+        "📊 `/stats` - View Telemetry\n"
+        "🔐 `/audit` - View Ledger\n"
+        "🧹 `/reconcile` - Optimize Database"
     )
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 @admin_only
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Utilizing Parameterized Queries (Standard Anti-Injection Protocol)
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    
-    c.execute("SELECT COUNT(*) FROM users")
-    total_users = c.fetchone()[0]
-    
-    c.execute("SELECT COUNT(*) FROM users WHERE status = ?", ("active",))
-    active_users = c.fetchone()[0]
-    
-    c.execute("SELECT SUM(main_balance) FROM wallets")
-    total_liquidity = c.fetchone()[0] or 0.00
-    
+    total_users = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    total_liquidity = c.execute("SELECT SUM(main_balance) FROM wallets").fetchone()[0] or 0.00
     conn.close()
     
-    msg = (
-        "👥 **ISOLATED NODE TELEMETRY**\n"
-        "--------------------------\n"
-        f"🌐 Registered Identities: `{total_users}`\n"
-        f"🟢 Active Nodes: `{active_users}`\n"
-        f"💰 Total Protocol Liquidity: `${total_liquidity:,.2f}`"
-    )
+    msg = f"👥 **NODE TELEMETRY**\n🌐 Users: `{total_users}`\n💰 Total Liquidity: `${total_liquidity:,.2f}`"
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 @admin_only
 async def audit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Pulls the latest 5 immutable logs from the security database."""
     conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT event_type, description, timestamp FROM audit_logs ORDER BY timestamp DESC LIMIT 5")
-    logs = c.fetchall()
+    logs = conn.execute("SELECT event_type, description, timestamp FROM audit_logs ORDER BY timestamp DESC LIMIT 5").fetchall()
     conn.close()
     
     if not logs:
-        await update.message.reply_text("No recent audit logs found.")
+        await update.message.reply_text("No recent logs.")
         return
 
-    msg = "🔐 **RECENT SECURITY LOGS**\n\n"
+    msg = "🔐 **SECURITY LOGS**\n\n"
     for log in logs:
         msg += f"[{log[2]}] **{log[0]}**\n`{log[1]}`\n\n"
-        
-    await update.message.reply_text(msg, parse_mode="Markdown")
-
-@admin_only
-async def diagnostics(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔬 *Verifying Cryptographic Boundaries & States...*", parse_mode="Markdown")
-    await asyncio.sleep(2) 
-    
-    msg = (
-        "🧠 **INTEGRITY REPORT**\n\n"
-        "**Multi-Tenant Isolation:** ✅ STABLE\n"
-        "**JWT Session Handlers:** ✅ STABLE\n"
-        "**WebSocket Feed Encryption:** ✅ STABLE\n\n"
-        "_All node boundaries are operating under strict isolation protocols._"
-    )
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 @admin_only
 async def reconcile(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🧹 *Reconciling Database States and Optimizing Engine...*", parse_mode="Markdown")
-    
+    await update.message.reply_text("🧹 *Reconciling Database States...*", parse_mode="Markdown")
     conn = sqlite3.connect(DB_FILE)
-    # Log the action before execution
-    conn.execute("INSERT INTO audit_logs (event_type, description) VALUES (?, ?)", 
-                 ("SYS_RECONCILE", "Admin triggered manual database vacuum and index rebuild."))
     conn.execute("VACUUM") 
     conn.commit()
     conn.close()
-    
-    await asyncio.sleep(1.5)
-    await update.message.reply_text("✅ **RECONCILIATION COMPLETE.**\nLedgers synced and cache memory purged successfully.")
+    await update.message.reply_text("✅ **RECONCILIATION COMPLETE.**")
 
-def main():
-    init_secure_db()
-    
-    # In a real environment, load this securely from a .env file or secret manager
+# ==========================================
+# 5. ASYNC EXECUTION MANAGER
+# ==========================================
+async def run_telegram_bot():
+    """Runs the Telegram bot continuously alongside the FastAPI server."""
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
-        logger.error("CRITICAL: TELEGRAM_BOT_TOKEN environment variable not set.")
+        logger.error("CRITICAL: TELEGRAM_BOT_TOKEN not set. Bot will not start.")
         return
         
-    app = Application.builder().token(token).build()
+    bot_app = Application.builder().token(token).build()
+    bot_app.add_handler(CommandHandler("start", start))
+    bot_app.add_handler(CommandHandler("stats", stats))
+    bot_app.add_handler(CommandHandler("audit", audit))
+    bot_app.add_handler(CommandHandler("reconcile", reconcile))
     
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("stats", stats))
-    app.add_handler(CommandHandler("audit", audit))
-    app.add_handler(CommandHandler("diagnostics", diagnostics))
-    app.add_handler(CommandHandler("reconcile", reconcile))
-    
-    logger.info("Admin Controller Online. Strict security verification active.")
-    app.run_polling()
+    await bot_app.initialize()
+    await bot_app.start()
+    await bot_app.updater.start_polling()
+    logger.info("Telegram Admin Bot is actively polling.")
+
+@app.on_event("startup")
+async def startup_event():
+    """Triggered automatically when FastAPI (Uvicorn) starts."""
+    init_secure_db()
+    # Schedule the Telegram bot to run in the background event loop
+    asyncio.create_task(run_telegram_bot())
 
 if __name__ == "__main__":
-    main()
+    # Start the unified engine on local port 8000
+    uvicorn.run("data_engine:app", host="0.0.0.0", port=8000, reload=False)
