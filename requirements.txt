@@ -1,12 +1,10 @@
 websockets
 pandas
 requests
-python-telegram-bot
 web3
 cryptography
 eth-account
-fastapi
-uvicorn
-pyjwt
-
-
+fastapi==0.110.0
+uvicorn==0.28.0
+pyjwt==2.8.0
+python-telegram-bot==21.0.1
