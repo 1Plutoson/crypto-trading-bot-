@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LENs Institutional Terminal Matrix v3</title>
+    <title>LENs Institutional Terminal Matrix v3.1</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -18,58 +18,56 @@
         .view-section.active { display: block; }
         @keyframes swipeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Custom UI Components */
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 15px; position: relative; }
         .balance-label { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
         .balance-num { font-size: 34px; font-weight: 800; color: #fff; margin: 6px 0; font-family: monospace; }
         
-        /* Grid Options Configuration System */
         .option-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 15px 0; }
         .select-box { background: var(--surface-light); border: 1px solid var(--border); padding: 12px 5px; text-align: center; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
         .select-box.active { border-color: var(--primary); background: rgba(240, 185, 11, 0.08); color: var(--primary); }
 
-        /* Dual Column Real-Time Market Widget */
         .market-widget { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
         .market-column { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; height: 320px; overflow-y: auto; }
         .column-header { font-size: 12px; font-weight: bold; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); text-transform: uppercase; position: sticky; top: 0; background: var(--surface); }
         .ticker-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 12px; cursor: pointer; }
         .ticker-row:hover { background: var(--surface-light); }
 
-        /* Configuration Forms inputs */
         .input-field { width: 100%; background: var(--surface-light); border: 1px solid var(--border); padding: 14px; border-radius: 10px; color: #fff; font-size: 16px; font-weight: bold; font-family: monospace; margin-bottom: 15px; }
         .primary-btn { width: 100%; background: var(--primary); color: #000; padding: 16px; border: none; border-radius: 12px; font-weight: 800; font-size: 14px; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
         .primary-btn:active { transform: scale(0.98); }
 
-        /* Live TradingView Overlay Matrix Frame */
         #tv-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; display: none; flex-direction: column; }
         
-        /* Persistent Navigation Control Deck */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 16px; z-index: 150; }
         .nav-item { text-align: center; color: var(--text-muted); font-size: 11px; cursor: pointer; width: 25%; }
         .nav-item i { font-size: 20px; margin-bottom: 4px; display: block; }
         .nav-item.active { color: var(--primary); }
+
+        /* Real-Time Ledger Confirmation Tracking List Styling */
+        .deposit-log-item { display: flex; justify-content: space-between; font-size: 11px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
     </style>
 </head>
 <body>
 
     <div style="background: var(--surface); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);">
-        <span style="font-weight: 800; font-size: 15px; letter-spacing: 0.5px;">LENs Terminal v3</span>
+        <span style="font-weight: 800; font-size: 15px; letter-spacing: 0.5px;">LENs Terminal v3.1</span>
         <div id="connection-status" style="font-size: 11px; font-weight: 700; background: rgba(246,70,93,0.1); color: var(--danger); padding: 4px 10px; border-radius: 20px;">
-            <i class="fa-solid fa-circle"></i> DISCONNECTED
+            <i class="fa-solid fa-circle"></i> NETWORK LINK DOWN
         </div>
     </div>
 
+    <!-- VIEW: MARKETS -->
     <div id="view-home" class="view-section active">
         <div class="card">
-            <div class="balance-label">Total Asset Infrastructure</div>
+            <div class="balance-label">Total Account Ledger Balance</div>
             <div class="balance-num" id="balance-main">$0.00</div>
             <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 10px; color: var(--text-muted);">
-                <span>Locked Matrix: <strong style="color: #fff;" id="bonus-pool">$0.00</strong></span>
-                <span>Claimable: <strong style="color: var(--success);" id="unlocked-bonus">$0.00</strong></span>
+                <span>Escrowed Assets: <strong style="color: #fff;" id="bonus-pool">$0.00</strong></span>
+                <span>Claimable Liquidity: <strong style="color: var(--success);" id="unlocked-bonus">$0.00</strong></span>
             </div>
         </div>
 
-        <div style="margin: 15px 0 5px 0; font-weight: 800; font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Real-Time Exchange Widget (30 Pairs)</div>
+        <div style="margin: 15px 0 5px 0; font-weight: 800; font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Real-Time Exchange Stream</div>
         <div class="market-widget">
             <div class="market-column">
                 <div class="column-header" style="color: var(--success);">🔥 Top Gainers</div>
@@ -82,28 +80,29 @@
         </div>
     </div>
 
+    <!-- VIEW: STRATEGY ARBITRAGE ENGINES -->
     <div id="view-trade" class="view-section">
         <div id="engine-selection-screen">
-            <h4 style="margin-bottom: 15px;">Algorithmic Configuration</h4>
+            <h4 style="margin-bottom: 15px;">Algorithmic Core Selectors</h4>
             <div class="card" onclick="selectEngine('high')" style="border-left: 4px solid var(--primary);">
                 <h5>Quantum AI Trading Bot</h5>
-                <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Aggressive behavior model. High frequency algorithmic tracking (Long/Short). Target: 85% - 90% Win Rate Accuracy.</p>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Aggressive behavior parameters. High-greed tracking metrics. Scope: 85% - 90% Win-Rate Targets.</p>
             </div>
             <div class="card" onclick="selectEngine('mid')" style="border-left: 4px solid #3498db;">
                 <h5>Advanced AI Trading Bot</h5>
-                <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Moderate balance model. Yield curve scanning logic optimizations. Target: 60% - 70% Win Rate Accuracy.</p>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Balanced model engine execution. Yield optimization profiles. Scope: 60% - 70% Win-Rate Targets.</p>
             </div>
             <div class="card" onclick="selectEngine('low')" style="border-left: 4px solid var(--success);">
                 <h5>Strong Regular AI Bot</h5>
-                <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Low risk deployment. Core rules-based statistical standard optimization tracking. Target: 50% - 65% Win Rate.</p>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Low-greed safe performance curves. Standard statistical tracking framework. Scope: 50% - 65% Win-Rate.</p>
             </div>
         </div>
 
         <div id="engine-runtime-screen" style="display: none;">
-            <div style="margin-bottom: 15px; font-weight: bold; cursor: pointer; color: var(--primary);" onclick="backToEngines()"><i class="fa-solid fa-arrow-left"></i> Adjust Bot Choice</div>
+            <div style="margin-bottom: 15px; font-weight: bold; cursor: pointer; color: var(--primary);" onclick="backToEngines()"><i class="fa-solid fa-arrow-left"></i> Reconfigure Engine</div>
             <div class="card">
                 <h5 style="text-transform: uppercase; color: var(--primary);" id="selected-engine-title">Quantum Engine</h5>
-                <p style="font-size: 11px; color: var(--text-muted);">Set configuration rules. Target tracking asset: <span id="target-asset-label" style="color:#fff; font-weight:bold;">BTCUSDT</span></p>
+                <p style="font-size: 11px; color: var(--text-muted);">Execution profile loaded. Focus target instrument: <span id="target-asset-label" style="color:#fff; font-weight:bold;">BTCUSDT</span></p>
             </div>
 
             <label class="balance-label">Select Process Execution Timeline</label>
@@ -116,9 +115,9 @@
             </div>
 
             <div id="deployment-input-block" style="display: none;">
-                <label class="balance-label">Deployment Size (USDT)</label>
+                <label class="balance-label">Deployment Capital Input Size (USDT)</label>
                 <input type="number" class="input-field" id="trade-amount-input" value="50" min="10">
-                <button class="primary-btn" onclick="commitEngineDeployment()">Execute Active Matrix</button>
+                <button class="primary-btn" onclick="commitEngineDeployment()">Deploy Engine Matrix</button>
             </div>
             <div id="deployment-denied-block" style="background: rgba(246,70,93,0.1); padding: 15px; border-radius: 12px; text-align: center; color: var(--danger); font-size: 12px; font-weight: bold;">
                 ⚠️ Execution Locked: Account configuration balance insufficient ($0.00).
@@ -126,14 +125,20 @@
         </div>
     </div>
 
+    <!-- VIEW: SECURE GATEWAY HUB -->
     <div id="view-wallet" class="view-section">
-        <h3>Node Management Port</h3>
-        <button class="primary-btn" onclick="generateSecureNode()" id="node-btn" style="background: var(--surface-light); color: #fff; border: 1px solid var(--border); margin: 15px 0;">Initialize Infrastructure Node</button>
+        <h3>Node Port Gateway</h3>
+        <button class="primary-btn" onclick="generateSecureNode()" id="node-btn" style="background: var(--surface-light); color: #fff; border: 1px solid var(--border); margin: 15px 0;">Provision Ledger Sub-Node</button>
         
-        <div class="card">
-            <h5>USDT Secure Gateway Node (TRC-20)</h5>
-            <code style="display:block; background: var(--bg-dark); padding: 12px; border-radius: 8px; font-size: 11px; word-break: break-all; margin: 10px 0; border: 1px solid var(--border);">TYG7x89qWmNksPz2mAL17vKxR90PqX7z8L</code>
-            <p style="font-size: 10px; color: var(--text-muted);">Credits apply automatically via database state confirmation workers post network verification matrix checks.</p>
+        <div class="card" id="address-display-card" style="display:none;">
+            <h5 style="color: var(--primary);"><i class="fa-solid fa-shield-halved"></i> Unique Tracking Deposit Address (TRC-20)</h5>
+            <code id="sub-node-address" style="display:block; background: var(--bg-dark); padding: 14px; border-radius: 8px; font-size: 13px; word-break: break-all; margin: 10px 0; border: 1px solid var(--border); color:#fff; font-weight:bold; letter-spacing:0.5px;">PROVISIONING...</code>
+            <p style="font-size: 10px; color: var(--text-muted); margin-bottom:10px;">The backend scanner loop monitors this unique address via public RPC data streams. Deposited funds update your off-chain dashboard balance automatically upon validation.</p>
+            
+            <div style="font-size:11px; font-weight:bold; margin-top:15px; border-top:1px solid var(--border); padding-top:10px;">
+                <i class="fa-solid fa-spinner fa-spin" style="color:var(--primary)"></i> Live Blockchain Sync Ledger Feed
+                <div id="deposit-history-feed" style="margin-top:8px;"></div>
+            </div>
         </div>
     </div>
 
@@ -145,7 +150,7 @@
 
     <div id="tv-modal">
         <div style="background: var(--surface); padding: 15px; display: flex; justify-content: space-between; align-items: center;">
-            <strong id="tv-asset-title">Asset Chart</strong>
+            <strong id="tv-asset-title">Asset Chart Feed</strong>
             <button onclick="closeChart()" style="background: var(--danger); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-weight: bold;">CLOSE</button>
         </div>
         <div id="tv-container" style="flex-grow: 1;"></div>
@@ -161,7 +166,6 @@
         let activeAssetPair = 'BTCUSDT';
         let assetCache = {};
 
-        // Top 30 Core Metrics Stream Assets Configuration List Array Map
         const targetCryptoList = [
             'BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT','ADAUSDT','AVAXUSDT','DOTUSDT','DOGEUSDT','LINKUSDT',
             'SHIBUSDT','MATICUSDT','TRXUSDT','LTCUSDT','NEARUSDT','UNIUSDT','APTUSDT','FILUSDT','ICPUSDT','ATOMUSDT',
@@ -175,7 +179,6 @@
             document.getElementById(`btn-${target}`).classList.add('active');
         }
 
-        // Initialize connection logic natively streaming from Binance open endpoints Websocket layer
         function startBinanceStream() {
             const streamParam = targetCryptoList.map(s => `${s.toLowerCase()}@ticker`).join('/');
             const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${streamParam}`);
@@ -200,14 +203,13 @@
 
         function renderMarketMatrix() {
             const assets = Object.values(assetCache);
-            // Sort models
             const gainers = [...assets].sort((a,b) => b.percent - a.percent);
             const losers = [...assets].sort((a,b) => a.percent - b.percent);
             
             document.getElementById("gainer-slots").innerHTML = gainers.slice(0, 15).map(a => `
                 <div class="ticker-row" onclick="launchChart('${a.asset}')">
                     <strong>${a.asset.replace('USDT','')}</strong>
-                    <span style="color:var(--success); font-family:monospace;">${a.percent}%</span>
+                    <span style="color:var(--success); font-family:monospace;">+${a.percent}%</span>
                 </div>
             `).join('');
 
@@ -221,7 +223,7 @@
 
         function launchChart(symbol) {
             activeAssetPair = symbol;
-            document.getElementById("tv-asset-title").innerText = `${symbol} Institutional Feed`;
+            document.getElementById("tv-asset-title").innerText = `${symbol} Market Matrix`;
             document.getElementById("tv-modal").style.display = "flex";
             
             new TradingView.widget({
@@ -238,9 +240,7 @@
             });
         }
 
-        function closeChart() {
-            document.getElementById("tv-modal").style.display = "none";
-        }
+        function closeChart() { document.getElementById("tv-modal").style.display = "none"; }
 
         async function fetchSystemState() {
             if(!jwtToken) return;
@@ -250,20 +250,36 @@
                 });
                 const data = await res.json();
                 currentBalance = data.main_balance;
+                
                 document.getElementById("balance-main").innerText = `$${currentBalance.toFixed(2)}`;
                 document.getElementById("bonus-pool").innerText = `$${data.bonus_pool.toFixed(2)}`;
                 document.getElementById("unlocked-bonus").innerText = `$${data.unlocked_bonus.toFixed(2)}`;
-            } catch(e) { console.error("Identity context refresh dropped."); }
+                document.getElementById("sub-node-address").innerText = data.deposit_address;
+                
+                // Process dynamic off-chain database deposit histories (From 1779722407919.jpeg)
+                if (data.recent_deposits && data.recent_deposits.length > 0) {
+                    document.getElementById("deposit-history-feed").innerHTML = data.recent_deposits.map(d => `
+                        <div class="deposit-log-item">
+                            <span style="color:var(--success); font-weight:bold;"><i class="fa-solid fa-arrow-down-long"></i> +$${d.amount.toFixed(2)}</span>
+                            <span style="color:var(--text-muted); font-family:monospace;">${d.hash}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById("deposit-history-feed").innerHTML = `<p style="font-size:10px; color:var(--text-muted);">Awaiting incoming payments...</p>`;
+                }
+            } catch(e) { console.error("Identity synchronization check missed cycle."); }
         }
 
         async function generateSecureNode() {
             const res = await fetch(`${API_HOST}/api/wallet/burner`, { method: "POST" });
             const data = await res.json();
             jwtToken = data.token;
-            document.getElementById("node-btn").innerText = "Infrastructure Node Live";
+            
+            document.getElementById("node-btn").innerText = "Infrastructure Online";
             document.getElementById("node-btn").disabled = true;
+            document.getElementById("address-display-card").style.display = "block";
+            
             await fetchSystemState();
-            alert("Secure Cryptographic Tenant Session Token Issued via Gateway Core Matrix.");
         }
 
         function selectEngine(type) {
@@ -275,14 +291,15 @@
             document.getElementById("engine-selection-screen").style.display = "none";
             document.getElementById("engine-runtime-screen").style.display = "block";
             
-            // Operational runtime constraint toggle check rules
+            // Conditional input masking rule (Amount input appears only if there is money in the wallet)
             if(currentBalance > 0) {
                 document.getElementById("deployment-input-block").style.display = "block";
                 document.getElementById("deployment-denied-block").style.display = "none";
+                document.getElementById("trade-amount-input").max = currentBalance;
             } else {
                 document.getElementById("deployment-input-block").style.display = "none";
                 document.getElementById("deployment-denied-block").style.display = "block";
-                document.getElementById("deployment-denied-block").innerText = `⚠️ Execution Locked: Account deployment balance insufficient ($${currentBalance.toFixed(2)}).`;
+                document.getElementById("deployment-denied-block").innerText = `⚠️ Execution Locked: Account configuration balance insufficient ($${currentBalance.toFixed(2)}).`;
             }
         }
 
@@ -299,7 +316,7 @@
 
         async function commitEngineDeployment() {
             const size = parseFloat(document.getElementById("trade-amount-input").value);
-            if(size > currentBalance) { alert("Execution Error: Limits exceeded."); return; }
+            if(size > currentBalance || size <= 0) { alert("Execution Error: Invalid investment bounds allocation."); return; }
             
             try {
                 const res = await fetch(`${API_HOST}/api/trade/deploy`, {
@@ -320,14 +337,12 @@
                 await fetchSystemState();
                 backToEngines();
                 navigate('home');
-            } catch(e) { alert("Matrix process thread tracking error."); }
+            } catch(e) { alert("Matrix process thread tracking tracking failure."); }
         }
 
-        // Main entry execution frame
         window.addEventListener('load', () => {
             startBinanceStream();
-            // Regularly update balance history status fields
-            setInterval(fetchSystemState, 4000);
+            setInterval(fetchSystemState, 3000);
         });
     </script>
 </body>
