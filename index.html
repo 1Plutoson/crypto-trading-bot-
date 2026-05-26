@@ -225,56 +225,37 @@
             displayEl.style.background = "rgba(14, 203, 129, 0.1)";
         }
 
-        // --- WEB3 CONNECTION ENGINE (UPGRADED FOR TELEGRAM DATA LOOP-BACK) ---
+        // --- IMPROVED WALLET CONNECTION ENGINE ---
         async function connectWallet(silent = false) {
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             const provider = window.phantom?.solana || window.solana;
 
-            if (provider && provider.isPhantom) {
-                // We are inside an environment with Phantom injected (e.g., Phantom's app browser)
-                try {
+            try {
+                if (provider && provider.isPhantom) {
+                    // Already inside an environment that supports Phantom (like its browser)
                     const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
                     const connectedKey = resp.publicKey.toString();
                     setWalletUIActive(connectedKey);
                     
-                    // CRITICAL LOOP-BACK LOGIC: 
-                    // Verify if we are inside Telegram. If initData exists, we are in Telegram.
-                    const isInsideTelegram = window.Telegram?.WebApp?.initData !== undefined && window.Telegram.WebApp.initData !== "";
-                    
-                    if (isMobile && !isInsideTelegram && !silent) {
-                        // USER IS IN PHANTOM APP. REDIRECT DIRECTLY TO TELEGRAM MINI APP.
+                    // If we are in the Phantom App but outside Telegram, jump back
+                    if (isMobile && !window.Telegram?.WebApp?.initData) {
                         const botUsername = "bullxbear1_bot";
-                        
-                        // Using your exact new short name
                         const appShortName = "Trade"; 
-                        
-                        // The direct launch URL passing the key via startapp payload
-                        const returnToTelegramURL = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
-                        
-                        // Wait 1.5s to show success state, then snap back to Telegram
-                        setTimeout(() => {
-                            window.location.href = returnToTelegramURL;
-                        }, 1500);
-                    } else if (!silent) {
-                        alert("✅ Phantom Wallet Successfully Connected!");
+                        window.location.href = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
                     }
-                } catch (err) {
-                    console.error("Connection failed:", err);
-                    if (!silent) alert("❌ Connection request rejected.");
-                }
-            } else {
-                // We are inside Telegram's Webview and Phantom is not injected.
-                if (silent) return;
-
-                if (isMobile) {
-                    // Deep link to push them to Phantom's internal browser
-                    const cleanUrl = window.location.href.split('?')[0];
-                    const phantomIntent = `phantom://browse/${encodeURIComponent(cleanUrl)}`;
-                    window.location.href = phantomIntent;
                 } else {
-                    alert("Phantom Wallet not found! Please install the browser extension.");
-                    window.open("https://phantom.app/", "_blank");
+                    // WE ARE IN TELEGRAM: Trigger the safe deep-link to Phantom
+                    if (isMobile) {
+                        const currentUrl = encodeURIComponent(window.location.href);
+                        // Use a standard location redirect to prevent WebView crash
+                        window.location.href = `phantom://browse/${currentUrl}`;
+                    } else {
+                        alert("Phantom Wallet not detected. Please ensure it is installed.");
+                    }
                 }
+            } catch (err) {
+                console.error("Connection error:", err);
+                if (!silent) alert("Connection declined by user or app.");
             }
         }
 
