@@ -347,3 +347,58 @@
     </script>
 </body>
 </html>
+<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+
+<script>
+    // 1. Connect to the User's Wallet (Phantom)
+    async function connectWallet() {
+        if (window.solana && window.solana.isPhantom) {
+            try {
+                const resp = await window.solana.connect();
+                document.getElementById('wallet-status').innerText = `Connected: ${resp.publicKey.toString().slice(0, 6)}...`;
+                return resp.publicKey.toString();
+            } catch (err) {
+                alert("Connection failed. Please approve the wallet request.");
+            }
+        } else {
+            alert("Please install Phantom or a Solana-compatible Web3 wallet!");
+        }
+    }
+
+    // 2. Execute the Trade (Layer 3)
+    async function executeOnChainTrade(userPubKey, inputToken, outputToken, amount) {
+        alert("Fetching best DEX route and building transaction...");
+        
+        // A. Ask Python Backend to build the trade + add the 0.5% Admin Fee
+        const response = await fetch("https://your-backend-url.com/api/build_swap", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                user_public_key: userPubKey,
+                input_mint: inputToken,
+                output_mint: outputToken,
+                amount_lamports: amount 
+            })
+        });
+        
+        const data = await response.json();
+        const swapTransactionBuf = solanaWeb3.Buffer.from(data.swapTransaction, 'base64');
+        const transaction = solanaWeb3.VersionedTransaction.deserialize(swapTransactionBuf);
+
+        // B. Ask the User's Wallet to Sign the Trade
+        try {
+            alert("Please approve the transaction in your wallet.");
+            const { signature } = await window.solana.signAndSendTransaction(transaction);
+            
+            // C. Success! The trade executed and your fee was routed.
+            alert(`✅ Trade Successful! Signature: ${signature}`);
+            
+            // Ping Telegram bot to log the success
+            Telegram.WebApp.sendData(JSON.stringify({action: "trade_success", sig: signature}));
+            
+        } catch (error) {
+            console.error("Trade rejected by user or failed:", error);
+            alert("❌ Trade Failed or Rejected.");
+        }
+    }
+</script>
