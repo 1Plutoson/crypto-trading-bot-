@@ -277,3 +277,45 @@ async def startup_event():
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+import httpx
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+# Your Admin Wallet Address on Solana where the 0.5% fees will be sent
+ADMIN_FEE_ACCOUNT = "Your_Solana_Wallet_Address_Here"
+
+class SwapRequest(BaseModel):
+    user_public_key: str
+    input_mint: str  # e.g., USDC address
+    output_mint: str # e.g., SOL, BTC-wrapped, ETH-wrapped
+    amount_lamports: int # The split amount (e.g., the $12.50 portion)
+
+@app.post("/api/build_swap")
+async def build_dex_swap(request: SwapRequest):
+    """
+    LAYER 1 & 2: Fetches the best DEX route and builds the transaction.
+    Injects a 50 BPS (0.5%) platform maintenance fee automatically.
+    """
+    async with httpx.AsyncClient() as client:
+        # 1. Get the best market route from Jupiter API with a 0.5% fee (50 bps)
+        quote_url = f"https://quote-api.jup.ag/v6/quote?inputMint={request.input_mint}&outputMint={request.output_mint}&amount={request.amount_lamports}&platformFeeBps=50"
+        quote_response = await client.get(quote_url)
+        
+        if quote_response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Failed to fetch DEX route.")
+            
+        quote_data = quote_response.json()
+
+        # 2. Build the exact transaction payload
+        swap_payload = {
+            "quoteResponse": quote_data,
+            "userPublicKey": request.user_public_key,
+            "wrapAndUnwrapSol": True,
+            "feeAccount": ADMIN_FEE_ACCOUNT # Routes the 0.5% fee directly to you
+        }
+        
+        swap_response = await client.post("https://quote-api.jup.ag/v6/swap", json=swap_payload)
+        swap_data = swap_response.json()
+        
+        # 3. Return the base64 encoded transaction to the frontend
+        return {"swapTransaction": swap_data["swapTransaction"]}
