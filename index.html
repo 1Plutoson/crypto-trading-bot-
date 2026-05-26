@@ -212,7 +212,7 @@
             document.getElementById('chart-modal').style.display = 'none';
         }
 
-        // Web3 Connection Infrastructure Interface (UPGRADED FOR SEAMLESS AUTO-HANDSHAKE)
+        // Web3 Connection Infrastructure Interface (UPGRADED TO PREVENT FALLBACK WEBVIEW TRAPS)
         async function connectWallet(silent = false) {
             try {
                 // 1. Locate the Phantom Provider (Handles standard injection profiles)
@@ -237,13 +237,22 @@
                     // Fail-safe exit for background automated checks
                     if (silent) return;
 
-                    // 4. Mobile Deep Linking Fallback Protocol
+                    // 4. Mobile Deep Linking Custom Protocol Breakout
                     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                     if (isMobile) {
                         const cleanUrl = window.location.href.split('?')[0];
                         const appUrl = encodeURIComponent(cleanUrl);
-                        // Connects directly to deep link scheme mapping
-                        window.location.href = `https://phantom.app/ul/browse/${appUrl}?ref=${appUrl}`;
+                        
+                        // Force custom protocol URI to break away from the web browser hijacking loop
+                        const phantomIntent = `phantom://browse/${appUrl}?ref=${appUrl}`;
+                        
+                        // Programmatically trigger a standard anchor breakout action
+                        const anchor = document.createElement("a");
+                        anchor.href = phantomIntent;
+                        anchor.target = "_blank"; 
+                        document.body.appendChild(anchor);
+                        anchor.click();
+                        document.body.removeChild(anchor);
                     } else {
                         alert("Phantom Wallet not found! Please install the browser extension.");
                         window.open("https://phantom.app/", "_blank");
