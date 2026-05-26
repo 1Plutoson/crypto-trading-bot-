@@ -212,14 +212,16 @@
             document.getElementById('chart-modal').style.display = 'none';
         }
 
-        // Web3 Connection Infrastructure Interface (UPGRADED TO PREVENT FALLBACK WEBVIEW TRAPS)
+        // Web3 Connection Infrastructure Interface (UPGRADED FOR AUTO-REDIRECT)
         async function connectWallet(silent = false) {
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
             try {
-                // 1. Locate the Phantom Provider (Handles standard injection profiles)
+                // 1. Locate the Phantom Provider
                 const provider = window.phantom?.solana || window.solana;
 
                 if (provider && provider.isPhantom) {
-                    // 2. Connect securely. If silent (auto-on-load), check if trusted first to protect UX.
+                    // 2. Connect securely.
                     const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
                     walletKey = resp.publicKey.toString();
                     
@@ -230,15 +232,26 @@
                     displayEl.style.borderColor = "rgba(14, 203, 129, 0.2)";
                     displayEl.style.background = "rgba(14, 203, 129, 0.1)";
                     
-                    if (!silent) {
+                    // 4. TELEGRAM AUTO-RETURN PROTOCOL
+                    if (isMobile) {
+                        // Integrated your specific bot username
+                        const botUsername = "bullxbear1_bot"; 
+                        
+                        // Pass the walletKey back to Telegram as a payload (startapp parameter)
+                        const telegramDeepLink = `tg://resolve?domain=${botUsername}&startapp=${walletKey}`;
+                        
+                        // Wait 1.5 seconds so the user sees the green success state, then jump back to TG
+                        setTimeout(() => {
+                            window.location.href = telegramDeepLink;
+                        }, 1500);
+                    } else if (!silent) {
                         alert("✅ Phantom Wallet Successfully Connected!");
                     }
                 } else {
                     // Fail-safe exit for background automated checks
                     if (silent) return;
 
-                    // 4. Mobile Deep Linking Custom Protocol Breakout
-                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    // 5. Mobile Deep Linking Custom Protocol Breakout (Initial Connect)
                     if (isMobile) {
                         const cleanUrl = window.location.href.split('?')[0];
                         const appUrl = encodeURIComponent(cleanUrl);
@@ -275,14 +288,17 @@
             alert(`Broadcasting allocation requests to Python engine for Jupiter route generation matching targeted token index profiles: ${asset}`);
         }
 
-        // AUTOMATED RE-ENTRY HOOK (The Final Fix for Phantom's In-App Handshake)
+        // AUTOMATED RE-ENTRY HOOK 
         window.addEventListener('DOMContentLoaded', () => {
-            // Allows a 300ms window for Phantom container allocation before checking state arrays
-            setTimeout(() => {
-                const isInsidePhantom = window.phantom?.solana || window.solana;
-                if (isInsidePhantom) {
-                    // Automatically connect securely without forcing user to tap again
-                    connectWallet(false);
+            setTimeout(async () => {
+                const provider = window.phantom?.solana || window.solana;
+                if (provider && provider.isPhantom) {
+                    try {
+                        // First attempt to connect silently (only if trusted)
+                        await connectWallet(true);
+                    } catch (e) {
+                        console.log("Silent connection failed, awaiting manual user interaction.");
+                    }
                 }
             }, 300);
         });
