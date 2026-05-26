@@ -188,26 +188,17 @@
             document.getElementById(`btn-${target}`).classList.add('active');
         }
 
-        // Sidebar Control Logic
         function toggleSidebar(open) {
             document.getElementById('sidebar').classList.toggle('active', open);
             document.getElementById('overlay').classList.toggle('active', open);
         }
 
-        // Dynamic Embedded TradingView Widget Initializer
         function openChart(symbol) {
             document.getElementById('chart-modal').style.display = 'flex';
             new TradingView.widget({
-                "autosize": true,
-                "symbol": symbol,
-                "interval": "60",
-                "timezone": "Etc/UTC",
-                "theme": "dark",
-                "style": "1",
-                "locale": "en",
-                "enable_publishing": false,
-                "hide_side_toolbar": true,
-                "container_id": "tradingview_widget"
+                "autosize": true, "symbol": symbol, "interval": "60", "timezone": "Etc/UTC",
+                "theme": "dark", "style": "1", "locale": "en", "enable_publishing": false,
+                "hide_side_toolbar": true, "container_id": "tradingview_widget"
             });
         }
 
@@ -225,7 +216,7 @@
             displayEl.style.background = "rgba(14, 203, 129, 0.1)";
         }
 
-        // --- IMPROVED WALLET CONNECTION ENGINE ---
+        // --- "SAFE BRIDGE" CONNECTION LOGIC ---
         async function connectWallet(silent = false) {
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             const provider = window.phantom?.solana || window.solana;
@@ -242,6 +233,8 @@
                         const botUsername = "bullxbear1_bot";
                         const appShortName = "Trade"; 
                         window.location.href = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
+                    } else if (!silent) {
+                        alert("✅ Phantom Wallet Successfully Connected!");
                     }
                 } else {
                     // WE ARE IN TELEGRAM: Trigger the safe deep-link to Phantom
@@ -251,6 +244,7 @@
                         window.location.href = `phantom://browse/${currentUrl}`;
                     } else {
                         alert("Phantom Wallet not detected. Please ensure it is installed.");
+                        window.open("https://phantom.app/", "_blank");
                     }
                 }
             } catch (err) {
@@ -259,7 +253,7 @@
             }
         }
 
-        // On-chain interaction handling
+        // On-chain interaction
         async function executeOnChainNode(asset) {
             if (!walletKey) {
                 alert("Initialize connection to Web3 node network matrix via header wallet bridge first.");
@@ -276,10 +270,10 @@
                 window.Telegram.WebApp.ready(); // Inform Telegram the app is fully loaded
                 const initData = window.Telegram.WebApp.initDataUnsafe;
                 
-                // If Phantom passed the key to Telegram, catch it here:
+                // If Phantom passed the key to Telegram, and Telegram passed it to us here:
                 if (initData && initData.start_param) {
                     setWalletUIActive(initData.start_param);
-                    return; // Halt further execution, successfully looped back!
+                    return; // Halt further execution, we are successfully looped back!
                 }
             }
 
