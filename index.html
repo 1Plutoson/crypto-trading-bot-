@@ -25,7 +25,7 @@
         /* --- HEADER & NAVIGATION --- */
         header { background: var(--surface); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); position: fixed; top: 0; width: 100%; z-index: 100; }
         .menu-btn { font-size: 24px; background: none; border: none; color: var(--text-main); cursor: pointer; }
-        .wallet-badge { background: rgba(240, 185, 11, 0.1); color: var(--primary); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; border: 1px solid rgba(240, 185, 11, 0.2); }
+        .wallet-badge { background: rgba(240, 185, 11, 0.1); color: var(--primary); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; border: 1px solid rgba(240, 185, 11, 0.2); cursor: pointer; }
 
         /* --- SLIDE OUT SIDEBAR --- */
         .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: var(--surface); z-index: 200; transition: 0.3s ease; box-shadow: 5px 0 15px rgba(0,0,0,0.5); padding: 20px; }
@@ -212,18 +212,41 @@
             document.getElementById('chart-modal').style.display = 'none';
         }
 
-        // Web3 Connection Infrastructure Interface
+        // Upgraded Web3 Connection Infrastructure Interface (Mobile Deep-Linking)
         async function connectWallet() {
-            if (window.solana && window.solana.isPhantom) {
-                try {
-                    const resp = await window.solana.connect();
+            try {
+                // 1. Locate the Phantom Provider
+                const provider = window.phantom?.solana || window.solana;
+
+                if (provider && provider.isPhantom) {
+                    // 2. Connect if provider exists (Desktop Extension or Phantom In-App Browser)
+                    const resp = await provider.connect();
                     walletKey = resp.publicKey.toString();
-                    document.getElementById('wallet-display').innerText = `${walletKey.slice(0,4)}...${walletKey.slice(-4)}`;
-                } catch (err) {
-                    console.log("Connection connection aborted.");
+                    
+                    // 3. Update the UI badge to show the real wallet address (Green status)
+                    const statusEl = document.getElementById('wallet-display');
+                    statusEl.innerText = `${walletKey.slice(0, 4)}...${walletKey.slice(-4)}`;
+                    statusEl.style.color = "var(--success)";
+                    statusEl.style.borderColor = "rgba(14, 203, 129, 0.2)";
+                    statusEl.style.background = "rgba(14, 203, 129, 0.1)";
+                    
+                } else {
+                    // 4. Mobile Deep Linking Fallback (For Telegram/Safari/Chrome users)
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    if (isMobile) {
+                        alert("Redirecting to Phantom App for secure connection...");
+                        const appUrl = encodeURIComponent(window.location.href);
+                        // Opens the Phantom Mobile App natively
+                        window.location.href = `https://phantom.app/ul/browse/${appUrl}?ref=${appUrl}`;
+                    } else {
+                        // Desktop user without the extension installed
+                        alert("Phantom Wallet not found! Please install the browser extension.");
+                        window.open("https://phantom.app/", "_blank");
+                    }
                 }
-            } else {
-                alert("Phantom Web3 client extension signature container not detected.");
+            } catch (err) {
+                console.error("Wallet connection error:", err);
+                alert("❌ Connection request rejected by the user.");
             }
         }
 
