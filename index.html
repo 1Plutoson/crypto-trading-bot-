@@ -110,7 +110,7 @@
                     <div><strong>BNB</strong> <span style="color: var(--text-muted); font-size: 12px;">/USDT</span></div>
                     <div class="badge-green">+0.92%</div>
                 </div>
-                </div>
+            </div>
         </div>
     </main>
 
@@ -212,26 +212,27 @@
             document.getElementById('chart-modal').style.display = 'none';
         }
 
-        // Upgraded Web3 Connection Infrastructure Interface (Mobile Deep-Linking)
+        // Web3 Connection Infrastructure Interface (UPGRADED FOR MOBILE DEEP LINKING)
         async function connectWallet() {
             try {
-                // 1. Locate the Phantom Provider
+                // 1. Locate the Phantom Provider (Handles both new and old injections)
                 const provider = window.phantom?.solana || window.solana;
 
                 if (provider && provider.isPhantom) {
-                    // 2. Connect if provider exists (Desktop Extension or Phantom In-App Browser)
+                    // 2. Connect if provider exists (Desktop Extension or In-App Browser)
                     const resp = await provider.connect();
                     walletKey = resp.publicKey.toString();
                     
-                    // 3. Update the UI badge to show the real wallet address (Green status)
-                    const statusEl = document.getElementById('wallet-display');
-                    statusEl.innerText = `${walletKey.slice(0, 4)}...${walletKey.slice(-4)}`;
-                    statusEl.style.color = "var(--success)";
-                    statusEl.style.borderColor = "rgba(14, 203, 129, 0.2)";
-                    statusEl.style.background = "rgba(14, 203, 129, 0.1)";
+                    // 3. Update the UI to show the real wallet address in green
+                    const displayEl = document.getElementById('wallet-display');
+                    displayEl.innerText = `${walletKey.slice(0,4)}...${walletKey.slice(-4)}`;
+                    displayEl.style.color = "#0ecb81"; 
+                    displayEl.style.borderColor = "rgba(14, 203, 129, 0.2)";
+                    displayEl.style.background = "rgba(14, 203, 129, 0.1)";
                     
+                    alert("✅ Phantom Wallet Successfully Connected!");
                 } else {
-                    // 4. Mobile Deep Linking Fallback (For Telegram/Safari/Chrome users)
+                    // 4. Mobile Deep Linking Fallback (For Telegram/Safari/Chrome)
                     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                     if (isMobile) {
                         alert("Redirecting to Phantom App for secure connection...");
