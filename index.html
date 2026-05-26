@@ -2,171 +2,281 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LENs Web3 Trading Core</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/index.bundle.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LENs Premium Trading Core</title>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    <script src="https://s3.tradingview.com/tv.js"></script>
     
     <style>
-        body {
-            background-color: #0b0e14;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 90vh;
+        :root {
+            --bg-main: #06080c;
+            --surface: #0e121a;
+            --surface-card: #151b26;
+            --primary: #f0b90b;
+            --success: #0ecb81;
+            --danger: #f6465d;
+            --text-main: #eaecef;
+            --text-muted: #848e9c;
         }
-        .container {
-            width: 100%;
-            max-width: 400px;
-            background: #151a26;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            text-align: center;
-            border: 1px solid #242f47;
-        }
-        h2 { color: #00ffcc; margin-bottom: 5px; font-weight: 600; }
-        p { color: #8a99ad; font-size: 14px; margin-bottom: 25px; }
-        .btn {
-            background: linear-gradient(135deg, #00ffcc 0%, #0099ff 100%);
-            color: #0b0e14;
-            border: none;
-            padding: 14px 28px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            transition: transform 0.2s, opacity 0.2s;
-        }
-        .btn:active { transform: scale(0.98); }
-        .status-box {
-            margin-top: 20px;
-            padding: 12px;
-            background: #1e2638;
-            border-radius: 8px;
-            font-size: 13px;
-            word-break: break-all;
-            border: 1px solid #2d3b56;
-            display: none;
-        }
-        .success { color: #00ffcc; border-color: #00ffcc; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg-main); color: var(--text-main); overflow-x: hidden; padding-bottom: 70px; }
+
+        /* --- HEADER & NAVIGATION --- */
+        header { background: var(--surface); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); position: fixed; top: 0; width: 100%; z-index: 100; }
+        .menu-btn { font-size: 24px; background: none; border: none; color: var(--text-main); cursor: pointer; }
+        .wallet-badge { background: rgba(240, 185, 11, 0.1); color: var(--primary); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; border: 1px solid rgba(240, 185, 11, 0.2); cursor: pointer; }
+
+        /* --- SLIDE OUT SIDEBAR --- */
+        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: var(--surface); z-index: 200; transition: 0.3s ease; box-shadow: 5px 0 15px rgba(0,0,0,0.5); padding: 20px; }
+        .sidebar.active { left: 0; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
+        .sidebar-menu-item { display: block; padding: 15px 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; font-weight: 500; }
+        .sidebar-menu-item:hover { background: var(--surface-card); color: var(--primary); }
+        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 150; display: none; }
+        .sidebar-overlay.active { display: block; }
+
+        /* --- APP VIEWPORTS --- */
+        .viewport { padding: 80px 20px 20px 20px; display: none; max-width: 800px; margin: 0 auto; }
+        .viewport.active { display: block; }
+
+        /* --- CARDS & WIDGETS --- */
+        .card { background: var(--surface); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.03); }
+        h2 { margin-bottom: 15px; font-size: 20px; font-weight: 600; }
+        .btn { width: 100%; padding: 14px; background: var(--primary); color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; }
+
+        /* --- HOME SECTION: GAINERS/LOSERS TICKER --- */
+        .ticker-container { max-height: 350px; overflow-y: auto; margin-top: 10px; }
+        .ticker-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); cursor: pointer; border-radius: 6px; }
+        .ticker-row:hover { background: var(--surface-card); }
+        .badge-green { background: rgba(14, 203, 129, 0.15); color: var(--success); padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .badge-red { background: rgba(246, 70, 93, 0.15); color: var(--danger); padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+
+        /* --- TRADINGVIEW MODAL --- */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--surface); width: 100%; max-width: 700px; height: 500px; border-radius: 12px; overflow: hidden; position: relative; }
+        .close-modal { position: absolute; top: 10px; right: 15px; font-size: 24px; color: #fff; cursor: pointer; z-index: 310; }
+
+        /* --- BOT GRID ENGINE --- */
+        .bot-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .bot-card { background: var(--surface-card); border-left: 4px solid var(--primary); padding: 15px; border-radius: 8px; }
+
+        /* --- BOTTOM NAV BAR --- */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; padding: 12px 0; z-index: 100; }
+        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 12px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 18px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>LENs Core Terminal</h2>
-    <p>Secure Solana Network Sync</p>
-    
-    <button class="btn" id="connectBtn" onclick="connectWallet()">Connect Phantom Wallet</button>
-    
-    <div class="status-box" id="statusBox">Initializing terminal...</div>
-</div>
+    <header>
+        <button class="menu-btn" onclick="toggleSidebar(true)">☰</button>
+        <div style="font-weight: bold; letter-spacing: 1px;">LENs ENGINE</div>
+        <div class="wallet-badge" id="wallet-display" onclick="connectWallet()">CONNECT WALLET</div>
+    </header>
 
-<script>
-    // Initialize Telegram WebApp interface
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // Opens full screen inside Telegram
+    <div class="sidebar-overlay" id="overlay" onclick="toggleSidebar(false)"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>Account Node</h3>
+            <button class="menu-btn" onclick="toggleSidebar(false)">✕</button>
+        </div>
+        <a href="#" class="sidebar-menu-item" onclick="alert('Pulling live on-chain positions...')">📊 Open Positions</a>
+        <a href="#" class="sidebar-menu-item" onclick="alert('No pending limit profiles found.')">⏳ Current Orders</a>
+        <a href="#" class="sidebar-menu-item" onclick="alert('Loading archived database records...')">📜 Execution History</a>
+    </div>
 
-    // App Configuration for Deep Linking
-    const NETWORK_CLUSTER = "mainnet-beta";
-    const APP_URL = window.location.origin + window.location.pathname;
+    <main id="view-home" class="viewport active">
+        <div class="card">
+            <h2>Market Core Indicators</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">Top gainers & losers. Click asset row to initiate real-time TradingView tracking modules.</p>
+            
+            <div class="ticker-container">
+                <div class="ticker-row" onclick="openChart('BINANCE:BTCUSDT')">
+                    <div><strong>BTC</strong> <span style="color: var(--text-muted); font-size: 12px;">/USDT</span></div>
+                    <div class="badge-green">+4.82%</div>
+                </div>
+                <div class="ticker-row" onclick="openChart('BINANCE:ETHUSDT')">
+                    <div><strong>ETH</strong> <span style="color: var(--text-muted); font-size: 12px;">/USDT</span></div>
+                    <div class="badge-green">+3.15%</div>
+                </div>
+                <div class="ticker-row" onclick="openChart('BINANCE:SOLUSDT')">
+                    <div><strong>SOL</strong> <span style="color: var(--text-muted); font-size: 12px;">/USDT</span></div>
+                    <div class="badge-red">-1.45%</div>
+                </div>
+                <div class="ticker-row" onclick="openChart('BINANCE:BNBUSDT')">
+                    <div><strong>BNB</strong> <span style="color: var(--text-muted); font-size: 12px;">/USDT</span></div>
+                    <div class="badge-green">+0.92%</div>
+                </div>
+            </div>
+        </div>
+    </main>
 
-    // Ephemeral Keypair generation for encryption session
-    let dappKeyPair = null;
-    if (!localStorage.getItem('dapp_pvt_key')) {
-        const kp = nacl.box.keyPair();
-        localStorage.setItem('dapp_pvt_key', bs58.encode(kp.secretKey));
-        localStorage.setItem('dapp_pub_key', bs58.encode(kp.publicKey));
-    }
-    
-    const dappSecretKey = bs58.decode(localStorage.getItem('dapp_pvt_key'));
-    const dappPublicKey = bs58.decode(localStorage.getItem('dapp_pub_key'));
+    <main id="view-bots" class="viewport">
+        <div class="card">
+            <h2>AI Trading Engine Stack</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">Dynamic execution parameters calibrated via active cloud matrices.</p>
+            
+            <div class="bot-grid">
+                <div class="bot-card">
+                    <h4>Low-Risk Matrix (Conservative)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Employs tight trailing configurations on macro liquidity trends.</p>
+                    <button class="btn" style="padding:8px; font-size:11px;" onclick="alert('Low-Risk Engine Synchronized')">Initialize Engine</button>
+                </div>
+                <div class="bot-card">
+                    <h4>Balanced Matrix (Adaptive)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Standard execution parameters. Leverages localized swing vectors.</p>
+                    <button class="btn" style="padding:8px; font-size:11px;" onclick="alert('Balanced Engine Synchronized')">Initialize Engine</button>
+                </div>
+                <div class="bot-card">
+                    <h4>High-Yield Matrix (Aggressive)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Maximum processing limits. Tracks momentum breakouts rapidly.</p>
+                    <button class="btn" style="padding:8px; font-size:11px;" onclick="alert('High-Yield Engine Synchronized')">Initialize Engine</button>
+                </div>
+            </div>
+        </div>
+    </main>
 
-    // Status display update utility
-    function updateStatus(msg, isSuccess = false) {
-        const box = document.getElementById('statusBox');
-        box.style.display = "block";
-        box.innerText = msg;
-        if (isSuccess) box.classList.add('success');
-    }
+    <main id="view-nodes" class="viewport">
+        <div class="card">
+            <h2>Web3 Node Terminal</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">Direct execution via non-custodial decentralized liquidity routers.</p>
+            
+            <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-size: 12px; color: var(--text-muted);">Current Allocation Target:</span>
+                <div style="font-size: 18px; font-weight: bold; color: var(--primary); margin-top: 5px;">$100.00 Splitting Matrix Matrix</div>
+                <div style="font-size: 11px; color: var(--success); margin-top: 3px;">Includes integrated 0.5% Web Maintenance Fee extraction.</div>
+            </div>
 
-    // --- SECURE INBOUND PROCESSING LOOP (When Phantom redirects back) ---
-    window.addEventListener('load', () => {
-        const params = new URLSearchParams(window.location.search);
-        
-        if (params.has("data") && params.has("nonce")) {
+            <button class="btn" onclick="executeOnChainNode('WBTC')" style="background: var(--success); color: #fff;">Deploy WBTC Split Node ($25)</button>
+        </div>
+    </main>
+
+    <div class="modal" id="chart-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeChart()">✕</span>
+            <div id="tradingview_widget" style="width:100%; height:100%;"></div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" id="btn-home" onclick="switchView('home')">
+            <span class="nav-icon">🏠</span><span>Home</span>
+        </button>
+        <button class="nav-item" id="btn-bots" onclick="switchView('bots')">
+            <span class="nav-icon">🤖</span><span>AI Bots</span>
+        </button>
+        <button class="nav-item" id="btn-nodes" onclick="switchView('nodes')">
+            <span class="nav-icon">🌐</span><span>Web3 Nodes</span>
+        </button>
+    </nav>
+
+    <script>
+        let walletKey = null;
+
+        // UI Core View Switching Logic
+        function switchView(target) {
+            document.querySelectorAll('.viewport').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`view-${target}`).classList.add('active');
+            document.getElementById(`btn-${target}`).classList.add('active');
+        }
+
+        // Sidebar Control Logic
+        function toggleSidebar(open) {
+            document.getElementById('sidebar').classList.toggle('active', open);
+            document.getElementById('overlay').classList.toggle('active', open);
+        }
+
+        // Dynamic Embedded TradingView Widget Initializer
+        function openChart(symbol) {
+            document.getElementById('chart-modal').style.display = 'flex';
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": symbol,
+                "interval": "60",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "enable_publishing": false,
+                "hide_side_toolbar": true,
+                "container_id": "tradingview_widget"
+            });
+        }
+
+        function closeChart() {
+            document.getElementById('chart-modal').style.display = 'none';
+        }
+
+        // Web3 Connection Infrastructure Interface (UPGRADED FOR SEAMLESS AUTO-HANDSHAKE)
+        async function connectWallet(silent = false) {
             try {
-                const phantomPublicKey = bs58.decode(params.get("phantom_encryption_public_key"));
-                const nonce = bs58.decode(params.get("nonce"));
-                const encryptedData = bs58.decode(params.get("data"));
+                // 1. Locate the Phantom Provider (Handles standard injection profiles)
+                const provider = window.phantom?.solana || window.solana;
 
-                // Decrypt payload from Phantom securely
-                const decrypted = nacl.box.open(encryptedData, nonce, phantomPublicKey, dappSecretKey);
-                if (!decrypted) throw new Error("Decryption failed. Secure link compromised.");
-
-                const data = JSON.parse(new TextDecoder().decode(decrypted));
-                
-                if (data.public_key) {
-                    const userWallet = data.public_key;
-                    updateStatus(`🔒 Securely Connected: ${userWallet}`, true);
-                    document.getElementById('connectBtn').style.display = 'none';
+                if (provider && provider.isPhantom) {
+                    // 2. Connect securely. If silent (auto-on-load), check if trusted first to protect UX.
+                    const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
+                    walletKey = resp.publicKey.toString();
                     
-                    // Send user public key back to Python Backend server if running
-                    sendToBackend(userWallet);
+                    // 3. Update the UI layout to display short-form cryptographic string in green
+                    const displayEl = document.getElementById('wallet-display');
+                    displayEl.innerText = `${walletKey.slice(0,4)}...${walletKey.slice(-4)}`;
+                    displayEl.style.color = "#0ecb81"; 
+                    displayEl.style.borderColor = "rgba(14, 203, 129, 0.2)";
+                    displayEl.style.background = "rgba(14, 203, 129, 0.1)";
+                    
+                    if (!silent) {
+                        alert("✅ Phantom Wallet Successfully Connected!");
+                    }
+                } else {
+                    // Fail-safe exit for background automated checks
+                    if (silent) return;
+
+                    // 4. Mobile Deep Linking Fallback Protocol
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    if (isMobile) {
+                        const cleanUrl = window.location.href.split('?')[0];
+                        const appUrl = encodeURIComponent(cleanUrl);
+                        // Connects directly to deep link scheme mapping
+                        window.location.href = `https://phantom.app/ul/browse/${appUrl}?ref=${appUrl}`;
+                    } else {
+                        alert("Phantom Wallet not found! Please install the browser extension.");
+                        window.open("https://phantom.app/", "_blank");
+                    }
                 }
             } catch (err) {
-                updateStatus(`⚠️ Security Handshake Failed: ${err.message}`);
+                console.error("Wallet connection matrix failure:", err);
+                if (!silent) {
+                    alert("❌ Connection request rejected or timed out.");
+                }
             }
         }
-    });
 
-    // --- CONNECT EXECUTION TRIGGER ---
-    async function connectWallet() {
-        // Option A: Provider available natively (Desktop or In-Wallet Browser)
-        if (window.solana && window.solana.isPhantom) {
-            try {
-                const response = await window.solana.connect();
-                const userWallet = response.publicKey.toString();
-                updateStatus(`🔒 Securely Connected: ${userWallet}`, true);
-                sendToBackend(userWallet);
-            } catch (err) {
-                updateStatus(`Connection rejected: ${err.message}`);
+        // On-chain interaction handling
+        async function executeOnChainNode(asset) {
+            if (!walletKey) {
+                alert("Initialize connection to Web3 node network matrix via header wallet bridge first.");
+                return;
             }
-        } 
-        // Option B: Universal Deep Linking Handshake (Mobile App Context)
-        else {
-            updateStatus("Redirecting to Phantom Secure Vault...");
-            const dAppPubBase58 = localStorage.getItem('dapp_pub_key');
-            
-            // Build parameters conforming strictly to Phantom standard
-            const connectUrl = `https://phantom.app/ul/v1/connect?` + 
-                `app_url=${encodeURIComponent(APP_URL)}` +
-                `&dapp_encryption_public_key=${dAppPubBase58}` +
-                `&redirect_link=${encodeURIComponent(APP_URL)}` +
-                `&cluster=${NETWORK_CLUSTER}`;
-            
-            // Fire redirect to external wallet app natively
-            window.location.href = connectUrl;
+            alert(`Broadcasting allocation requests to Python engine for Jupiter route generation matching targeted token index profiles: ${asset}`);
         }
-    }
 
-    function sendToBackend(walletAddress) {
-        // Optional hook: Sends address straight to your local or deployed FastAPI core
-        fetch('http://localhost:8000/api/register_wallet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_public_key: walletAddress })
-        }).catch(e => console.log("Backend offline, address saved locally inside client interface."));
-    }
-</script>
-
+        // AUTOMATED RE-ENTRY HOOK (The Final Fix for Phantom's In-App Handshake)
+        window.addEventListener('DOMContentLoaded', () => {
+            // Allows a 300ms window for Phantom container allocation before checking state arrays
+            setTimeout(() => {
+                const isInsidePhantom = window.phantom?.solana || window.solana;
+                if (isInsidePhantom) {
+                    // Automatically connect securely without forcing user to tap again
+                    connectWallet(false);
+                }
+            }, 300);
+        });
+    </script>
 </body>
 </html>
