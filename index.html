@@ -6,7 +6,6 @@
     <title>LENs Premium Trading Core</title>
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
     <script src="https://s3.tradingview.com/tv.js"></script>
     
@@ -206,27 +205,23 @@
             document.getElementById('chart-modal').style.display = 'none';
         }
 
-        // --- WALLET UI & BALANCE RENDERER (UPGRADED) ---
+        // --- WALLET UI & BALANCE RENDERER ---
         async function setWalletUIActive(key) {
             walletKey = key;
             const displayEl = document.getElementById('wallet-display');
             
-            // Show loading state first
             displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)} | Fetching...`;
             displayEl.style.color = "#0ecb81"; 
             displayEl.style.borderColor = "rgba(14, 203, 129, 0.2)";
             displayEl.style.background = "rgba(14, 203, 129, 0.1)";
 
             try {
-                // Fetch live SOL balance using the injected web3.js library
+                // Fetch live SOL balance
                 const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'));
                 const pubKey = new solanaWeb3.PublicKey(key);
                 const balance = await connection.getBalance(pubKey);
-                
-                // Convert lamports to SOL and format to 3 decimals
                 const solBalance = (balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
                 
-                // Display Key + Balance
                 displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)} | ${solBalance} SOL`;
             } catch (e) {
                 console.error("Balance fetch failed", e);
@@ -234,46 +229,56 @@
             }
         }
 
-        // --- BULLETPROOF WALLET CONNECTION ENGINE (CRASH-FREE) ---
+        // --- FORCED LOOPBACK CONNECTION ENGINE ---
         async function connectWallet(silent = false) {
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             const provider = window.phantom?.solana || window.solana;
+            
+            // Strict environment check: Are we inside the Telegram app right now?
+            const isTelegram = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform !== "unknown" && window.Telegram.WebApp.initData !== "";
 
             try {
                 if (provider && provider.isPhantom) {
-                    // 1. WE ARE ALREADY IN PHANTOM APP
+                    // 1. WE ARE INSIDE PHANTOM APP
                     const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
                     const connectedKey = resp.publicKey.toString();
                     
-                    // Render the UI with the balance
                     await setWalletUIActive(connectedKey);
                     
-                    // Loop-back: If on mobile but NOT inside Telegram, snap back
-                    if (isMobile && !window.Telegram?.WebApp?.initData) {
+                    // Loop-back: If on mobile but NOT inside Telegram, FORCE snap back to Telegram
+                    if (isMobile && !isTelegram) {
+                        const displayEl = document.getElementById('wallet-display');
+                        displayEl.innerText = "Securing link... Returning to TG";
+                        
                         const botUsername = "bullxbear1_bot";
                         const appShortName = "Trade"; 
+                        const returnUrl = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
                         
-                        // Wait 2 seconds so the user can see their balance loaded, then redirect
+                        // Wait 1.5 seconds so balance is seen, then use Anchor Tag Injection to bypass browser block
                         setTimeout(() => {
-                            window.location.href = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
-                        }, 2000); 
+                            const anchor = document.createElement('a');
+                            anchor.href = returnUrl;
+                            document.body.appendChild(anchor);
+                            anchor.click(); // Forces OS level execution
+                        }, 1500); 
                     } else if (!silent) {
                         alert("✅ Phantom Wallet Successfully Connected!");
                     }
                 } else {
-                    // 2. WE ARE IN TELEGRAM (Fixing the crash here)
-                    if (silent) return; // Fail-safe exit for background automated checks
+                    // 2. WE ARE IN TELEGRAM 
+                    if (silent) return; 
                     
                     if (isMobile) {
-                        // CRITICAL FIX: Use Phantom's HTTPS Universal Link instead of phantom://
-                        const targetUrl = encodeURIComponent(window.location.href.split('?')[0]);
+                        // Strip any messy parameters from the URL before passing to Phantom
+                        const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+                        const targetUrl = encodeURIComponent(cleanUrl);
                         const universalLink = `https://phantom.app/ul/browse/${targetUrl}`;
                         
-                        // CRITICAL FIX: Use Telegram's native openLink API to safely break out of the WebView
-                        if (window.Telegram && window.Telegram.WebApp) {
+                        // Use Telegram's native openLink API to transition smoothly
+                        if (isTelegram) {
                             window.Telegram.WebApp.openLink(universalLink);
                         } else {
-                            window.open(universalLink, '_blank');
+                            window.location.href = universalLink;
                         }
                     } else {
                         alert("Phantom Wallet not detected. Please ensure the extension is installed.");
@@ -282,11 +287,10 @@
                 }
             } catch (err) {
                 console.error("Connection error:", err);
-                if (!silent) alert("Connection declined by user or interrupted.");
+                if (!silent) alert("Connection declined by user.");
             }
         }
 
-        // On-chain interaction handling
         async function executeOnChainNode(asset) {
             if (!walletKey) {
                 alert("Initialize connection to Web3 node network matrix via header wallet bridge first.");
@@ -295,32 +299,30 @@
             alert(`Broadcasting allocation requests to Python engine for Jupiter route generation matching targeted token index profiles: ${asset}`);
         }
 
-        // --- AUTOMATED INITIALIZATION & TELEGRAM DATA CATCHER ---
+        // --- TELEGRAM DATA CATCHER & INIT ---
         window.addEventListener('DOMContentLoaded', () => {
-            
-            // 1. Check if Telegram booted this app and passed the Wallet Key via startapp payload
+            // 1. Catch payload sent from Phantom loop-back into Telegram
             if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.ready(); // Inform Telegram the app is fully loaded
+                window.Telegram.WebApp.ready(); 
                 const initData = window.Telegram.WebApp.initDataUnsafe;
                 
-                // If Phantom passed the key to Telegram, catch it here:
                 if (initData && initData.start_param) {
                     setWalletUIActive(initData.start_param);
-                    return; // Halt further execution, successfully looped back!
+                    return; // Stop execution, wallet successfully looped back!
                 }
             }
 
-            // 2. Fallback: If we are inside the Phantom browser, auto-connect instantly
+            // 2. If Phantom is detected instantly, auto-connect silently
             setTimeout(async () => {
                 const provider = window.phantom?.solana || window.solana;
                 if (provider && provider.isPhantom) {
                     try {
                         await connectWallet(true);
                     } catch (e) {
-                        console.log("Awaiting manual connection.");
+                        console.log("Awaiting manual interaction.");
                     }
                 }
-            }, 300);
+            }, 500);
         });
     </script>
 </body>
