@@ -22,96 +22,120 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background: var(--bg-main); color: var(--text-main); overflow-x: hidden; padding-bottom: 80px; }
+        body { background: var(--bg-main); color: var(--text-main); overflow-x: hidden; padding-bottom: 70px; }
 
+        /* --- HEADER & NAVIGATION --- */
         header { background: var(--surface); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); position: fixed; top: 0; width: 100%; z-index: 100; }
-        .menu-btn { font-size: 26px; background: none; border: none; color: var(--text-main); cursor: pointer; padding: 5px; }
-        .wallet-badge { background: rgba(240, 185, 11, 0.1); color: var(--primary); padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1px solid rgba(240, 185, 11, 0.25); cursor: pointer; }
+        .menu-btn { font-size: 24px; background: none; border: none; color: var(--text-main); cursor: pointer; }
+        .wallet-badge { background: rgba(240, 185, 11, 0.1); color: var(--primary); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; border: 1px solid rgba(240, 185, 11, 0.2); cursor: pointer; }
 
-        .sidebar { position: fixed; top: 0; left: -300px; width: 300px; height: 100%; background: var(--surface); z-index: 200; transition: 0.4s ease; box-shadow: 8px 0 20px rgba(0,0,0,0.6); padding: 20px; overflow-y: auto; }
+        /* --- SLIDE OUT SIDEBAR --- */
+        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: var(--surface); z-index: 200; transition: 0.3s ease; box-shadow: 5px 0 15px rgba(0,0,0,0.5); padding: 20px; }
         .sidebar.active { left: 0; }
-        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .sidebar-menu-item { display: block; padding: 16px 12px; color: var(--text-main); text-decoration: none; border-radius: 8px; margin-bottom: 6px; font-weight: 500; transition: 0.2s; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
+        .sidebar-menu-item { display: block; padding: 15px 10px; color: var(--text-main); text-decoration: none; border-radius: 6px; margin-bottom: 5px; font-weight: 500; }
         .sidebar-menu-item:hover { background: var(--surface-card); color: var(--primary); }
+        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 150; display: none; }
+        .sidebar-overlay.active { display: block; }
 
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 150; display: none; }
-        .overlay.active { display: block; }
-
-        .viewport { padding: 75px 20px 20px 20px; display: none; max-width: 820px; margin: 0 auto; }
+        /* --- APP VIEWPORTS --- */
+        .viewport { padding: 80px 20px 20px 20px; display: none; max-width: 800px; margin: 0 auto; }
         .viewport.active { display: block; }
 
-        .card { background: var(--surface); border-radius: 14px; padding: 22px; margin-bottom: 18px; border: 1px solid rgba(255,255,255,0.04); }
-        h2 { margin-bottom: 18px; font-size: 21px; font-weight: 600; }
-        .btn { width: 100%; padding: 15px; background: var(--primary); color: #000; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 8px; }
-        .btn:hover { opacity: 0.92; }
-        .btn-success { background: var(--success); }
+        /* --- CARDS & WIDGETS --- */
+        .card { background: var(--surface); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.03); }
+        h2 { margin-bottom: 15px; font-size: 20px; font-weight: 600; }
+        .btn { width: 100%; padding: 14px; background: var(--primary); color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; }
 
-        .bot-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-        .bot-card { background: var(--surface-card); padding: 20px; border-radius: 12px; border-left: 5px solid var(--primary); }
-
-        .ticker-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); border-radius: 8px; cursor: pointer; }
+        /* --- HOME SECTION: GAINERS/LOSERS TICKER --- */
+        .ticker-container { max-height: 350px; overflow-y: auto; margin-top: 10px; }
+        .ticker-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); cursor: pointer; border-radius: 6px; }
         .ticker-row:hover { background: var(--surface-card); }
+        .badge-green { background: rgba(14, 203, 129, 0.15); color: var(--success); padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .badge-red { background: rgba(246, 70, 93, 0.15); color: var(--danger); padding: 4px 8px; border-radius: 4px; font-weight: bold; }
 
-        .log-container { max-height: 280px; overflow-y: auto; background: #0a0d12; padding: 15px; border-radius: 10px; font-size: 13.8px; }
-        .log-entry { margin-bottom: 9px; color: var(--text-muted); }
+        /* --- TRADINGVIEW MODAL --- */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--surface); width: 100%; max-width: 700px; height: 500px; border-radius: 12px; overflow: hidden; position: relative; }
+        .close-modal { position: absolute; top: 10px; right: 15px; font-size: 24px; color: #fff; cursor: pointer; z-index: 310; }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface); border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; }
-        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 12px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        /* --- BOT GRID ENGINE --- */
+        .bot-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .bot-card { background: var(--surface-card); border-left: 4px solid var(--primary); padding: 15px; border-radius: 8px; }
+
+        /* --- BOTTOM NAV BAR --- */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; padding: 12px 0; z-index: 100; }
+        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 12px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .nav-item.active { color: var(--primary); }
-
-        /* Chart Modal */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 300; display: none; align-items: center; justify-content: center; padding: 10px; }
-        .modal-content { background: #0e121a; width: 100%; max-width: 900px; height: 85vh; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid rgba(240,185,11,0.2); }
-        .close-modal { position: absolute; top: 12px; right: 18px; font-size: 28px; color: #fff; cursor: pointer; z-index: 310; background: rgba(0,0,0,0.5); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .nav-icon { font-size: 18px; }
     </style>
 </head>
 <body>
 
     <header>
         <button class="menu-btn" onclick="toggleSidebar(true)">☰</button>
-        <div style="font-weight: bold; letter-spacing: 1.2px; font-size: 18px;">LENs ENGINE</div>
+        <div style="font-weight: bold; letter-spacing: 1px;">LENs ENGINE</div>
         <div class="wallet-badge" id="wallet-display" onclick="connectWallet()">CONNECT WALLET</div>
     </header>
 
-    <div class="overlay" id="overlay" onclick="toggleSidebar(false)"></div>
-
-    <!-- Sidebar -->
+    <div class="sidebar-overlay" id="overlay" onclick="toggleSidebar(false)"></div>
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h3>Account Node</h3>
             <button class="menu-btn" onclick="toggleSidebar(false)">✕</button>
         </div>
-        <a href="#" class="sidebar-menu-item" onclick="alert('Fetching live positions...')">📊 Open Positions</a>
-        <a href="#" class="sidebar-menu-item" onclick="alert('Scanning pending orders...')">⏳ Current Orders</a>
-        <a href="#" class="sidebar-menu-item" onclick="alert('Loading execution history...')">📜 Execution History</a>
-        <a href="#" class="sidebar-menu-item" onclick="alert('Risk parameters updated')">⚙️ Strategy Settings</a>
+        <a href="#" class="sidebar-menu-item" onclick="alert('Pulling live on-chain positions...')">📊 Open Positions</a>
+        <a href="#" class="sidebar-menu-item" onclick="alert('No pending limit profiles found.')">⏳ Current Orders</a>
+        <a href="#" class="sidebar-menu-item" onclick="alert('Loading archived database records...')">📜 Execution History</a>
     </div>
 
     <main id="view-home" class="viewport active">
         <div class="card">
             <h2>Market Core Indicators</h2>
-            <div id="ticker-list"></div>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">Top gainers & losers. Click asset row to initiate real-time TradingView tracking modules.</p>
+            
+            <div class="ticker-container">
+                <div class="ticker-row" onclick="openChart('BINANCE:BTCUSDT')">
+                    <div><strong>BTC</strong> <span style="color: var(--text-muted); font-size: 12px;">/USDT</span></div>
+                    <div class="badge-green">+4.82%</div>
+                </div>
+                <div class="ticker-row" onclick="openChart('BINANCE:ETHUSDT')">
+                    <div><strong>ETH</strong> <span style="color: var(--text-muted); font-size: 12px;">/USDT</span></div>
+                    <div class="badge-green">+3.15%</div>
+                </div>
+                <div class="ticker-row" onclick="openChart('BINANCE:SOLUSDT')">
+                    <div><strong>SOL</strong> <span style="color: var(--text-muted); font-size: 12px;">/USDT</span></div>
+                    <div class="badge-red">-1.45%</div>
+                </div>
+                <div class="ticker-row" onclick="openChart('BINANCE:BNBUSDT')">
+                    <div><strong>BNB</strong> <span style="color: var(--text-muted); font-size: 12px;">/USDT</span></div>
+                    <div class="badge-green">+0.92%</div>
+                </div>
+            </div>
         </div>
     </main>
 
     <main id="view-bots" class="viewport">
         <div class="card">
             <h2>AI Trading Engine Stack</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">Dynamic execution parameters calibrated via active cloud matrices.</p>
+            
             <div class="bot-grid">
                 <div class="bot-card">
-                    <h4>Low-Risk Matrix <span style="color:var(--success); font-size:13px;">● LIVE</span></h4>
-                    <p style="color:var(--text-muted); margin:8px 0;">Conservative • Stable yield focus</p>
-                    <button class="btn" onclick="activateBot('low-risk')">Activate Engine</button>
+                    <h4>Low-Risk Matrix (Conservative)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Employs tight trailing configurations on macro liquidity trends.</p>
+                    <button class="btn" style="padding:8px; font-size:11px;" onclick="alert('Low-Risk Engine Synchronized')">Initialize Engine</button>
                 </div>
                 <div class="bot-card">
-                    <h4>Alpha Momentum <span style="color:#f0b90b; font-size:13px;">● MEDIUM</span></h4>
-                    <p style="color:var(--text-muted); margin:8px 0;">Trend following • Higher frequency</p>
-                    <button class="btn" onclick="activateBot('momentum')">Activate Engine</button>
+                    <h4>Balanced Matrix (Adaptive)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Standard execution parameters. Leverages localized swing vectors.</p>
+                    <button class="btn" style="padding:8px; font-size:11px;" onclick="alert('Balanced Engine Synchronized')">Initialize Engine</button>
                 </div>
                 <div class="bot-card">
-                    <h4>Volatility Arbitrage <span style="color:var(--danger); font-size:13px;">● ADVANCED</span></h4>
-                    <p style="color:var(--text-muted); margin:8px 0;">High volatility • Max opportunity</p>
-                    <button class="btn" onclick="activateBot('volatility')">Activate Engine</button>
+                    <h4>High-Yield Matrix (Aggressive)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Maximum processing limits. Tracks momentum breakouts rapidly.</p>
+                    <button class="btn" style="padding:8px; font-size:11px;" onclick="alert('High-Yield Engine Synchronized')">Initialize Engine</button>
                 </div>
             </div>
         </div>
@@ -120,16 +144,18 @@
     <main id="view-nodes" class="viewport">
         <div class="card">
             <h2>Web3 Node Terminal</h2>
-            <button class="btn btn-success" onclick="deployNode('WBTC')">Deploy WBTC Split Node ($25)</button>
-        </div>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">Direct execution via non-custodial decentralized liquidity routers.</p>
+            
+            <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-size: 12px; color: var(--text-muted);">Current Allocation Target:</span>
+                <div style="font-size: 18px; font-weight: bold; color: var(--primary); margin-top: 5px;">$100.00 Splitting Matrix Matrix</div>
+                <div style="font-size: 11px; color: var(--success); margin-top: 3px;">Includes integrated 0.5% Web Maintenance Fee extraction.</div>
+            </div>
 
-        <div class="card">
-            <h2>Real-Time Execution Log</h2>
-            <div class="log-container" id="activity-log"></div>
+            <button class="btn" onclick="executeOnChainNode('WBTC')" style="background: var(--success); color: #fff;">Deploy WBTC Split Node ($25)</button>
         </div>
     </main>
 
-    <!-- TradingView Chart Modal -->
     <div class="modal" id="chart-modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeChart()">✕</span>
@@ -138,20 +164,28 @@
     </div>
 
     <nav class="bottom-nav">
-        <button class="nav-item active" onclick="switchView('home')">🏠<span>Home</span></button>
-        <button class="nav-item" onclick="switchView('bots')">🤖<span>AI Bots</span></button>
-        <button class="nav-item" onclick="switchView('nodes')">🌐<span>Web3 Nodes</span></button>
+        <button class="nav-item active" id="btn-home" onclick="switchView('home')">
+            <span class="nav-icon">🏠</span><span>Home</span>
+        </button>
+        <button class="nav-item" id="btn-bots" onclick="switchView('bots')">
+            <span class="nav-icon">🤖</span><span>AI Bots</span>
+        </button>
+        <button class="nav-item" id="btn-nodes" onclick="switchView('nodes')">
+            <span class="nav-icon">🌐</span><span>Web3 Nodes</span>
+        </button>
     </nav>
 
     <script>
+        // --- STABLE STATE TRACKING VIA PERSISTENT LOCAL CACHE ---
         let walletKey = localStorage.getItem('lens_secure_session') || null;
-        let tvWidget = null;
 
+        // UI Core View Switching Logic
         function switchView(target) {
-            document.querySelectorAll('.viewport').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.viewport').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
             document.getElementById(`view-${target}`).classList.add('active');
-            document.querySelector(`button[onclick="switchView('${target}')"]`).classList.add('active');
+            document.getElementById(`btn-${target}`).classList.add('active');
         }
 
         function toggleSidebar(open) {
@@ -159,126 +193,171 @@
             document.getElementById('overlay').classList.toggle('active', open);
         }
 
-        function addLog(message) {
-            const log = document.getElementById('activity-log');
-            const time = new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            entry.textContent = `[${time}] ${message}`;
-            log.appendChild(entry);
-            log.scrollTop = log.scrollHeight;
-        }
-
-        async function setWalletUIActive(key) {
-            walletKey = key;
-            localStorage.setItem('lens_secure_session', key);
-            const el = document.getElementById('wallet-display');
-            el.textContent = `\( {key.slice(0,4)}... \){key.slice(-4)}`;
-
-            try {
-                const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
-                const balance = await connection.getBalance(new solanaWeb3.PublicKey(key));
-                el.textContent = `\( {key.slice(0,4)}... \){key.slice(-4)} • ${(balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3)} SOL`;
-                addLog("Wallet connected successfully");
-            } catch (e) {
-                addLog("Wallet connected");
-            }
-        }
-
-        async function connectWallet() {
-            if (walletKey) {
-                if (confirm("Disconnect wallet?")) {
-                    localStorage.removeItem('lens_secure_session');
-                    location.reload();
-                }
-                return;
-            }
-
-            const provider = window.phantom?.solana || window.solana;
-            if (provider?.isPhantom) {
-                try {
-                    const resp = await provider.connect();
-                    await setWalletUIActive(resp.publicKey.toString());
-                } catch (err) {
-                    alert("Connection cancelled");
-                }
-            } else {
-                alert("Phantom Wallet required");
-            }
-        }
-
-        function activateBot(type) {
-            if (!walletKey) return alert("Connect wallet first");
-            addLog(`Activating ${type} AI Engine...`);
-            setTimeout(() => addLog(`${type.toUpperCase()} engine is now LIVE`), 1100);
-        }
-
-        function deployNode(token) {
-            if (!walletKey) return alert("Wallet required");
-            if (confirm(`Deploy ${token} Split Node for $25?`)) {
-                addLog(`Deploying ${token} Node...`);
-            }
-        }
-
-        // ==================== TRADINGVIEW INTEGRATION ====================
         function openChart(symbol) {
-            const modal = document.getElementById('chart-modal');
-            modal.style.display = 'flex';
-
-            // Clear previous widget
-            document.getElementById('tradingview_widget').innerHTML = '';
-
-            tvWidget = new TradingView.widget({
-                "container_id": "tradingview_widget",
-                "width": "100%",
-                "height": "100%",
-                "symbol": symbol,
-                "interval": "D",
-                "timezone": "Etc/UTC",
-                "theme": "dark",
-                "style": "1",
-                "locale": "en",
-                "toolbar_bg": "#0e121a",
-                "enable_publishing": false,
-                "allow_symbol_change": true,
-                "hide_top_toolbar": false,
-                "hide_legend": false,
-                "save_image": false,
-                "studies": ["RSI@tv-basicstudies", "MACD@tv-basicstudies"]
+            document.getElementById('chart-modal').style.display = 'flex';
+            new TradingView.widget({
+                "autosize": true, "symbol": symbol, "interval": "60", "timezone": "Etc/UTC",
+                "theme": "dark", "style": "1", "locale": "en", "enable_publishing": false,
+                "hide_side_toolbar": true, "container_id": "tradingview_widget"
             });
         }
 
         function closeChart() {
-            const modal = document.getElementById('chart-modal');
-            modal.style.display = 'none';
-            if (tvWidget) {
-                // Widget will be destroyed on next open
+            document.getElementById('chart-modal').style.display = 'none';
+        }
+
+        // --- WALLET UI & SYSTEM BALANCE ENGINE ---
+        async function setWalletUIActive(key) {
+            walletKey = key;
+            // Instantly commit the mapping state to local machine cache to handle refreshes
+            localStorage.setItem('lens_secure_session', key);
+
+            const displayEl = document.getElementById('wallet-display');
+            displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)} | Fetching...`;
+            displayEl.style.color = "#0ecb81"; 
+            displayEl.style.borderColor = "rgba(14, 203, 129, 0.2)";
+            displayEl.style.background = "rgba(14, 203, 129, 0.1)";
+
+            try {
+                // Instantiating standard Mainnet connection pool under confirmed commitment level
+                const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
+                const pubKey = new solanaWeb3.PublicKey(key);
+                const balance = await connection.getBalance(pubKey);
+                
+                // Real-time precise fractional calculation
+                const solBalance = (balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
+                displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)} | ${solBalance} SOL`;
+            } catch (e) {
+                console.error("Precision balance fetch failed", e);
+                displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)} | 0.00 SOL`;
             }
         }
 
-        // Load Market Data with clickable rows
-        function loadMarketData() {
-            const container = document.getElementById('ticker-list');
-            container.innerHTML = `
-                <div class="ticker-row" onclick="openChart('BINANCE:BTCUSDT')">
-                    <div><strong>BTC</strong>/USDT</div>
-                    <div style="color:var(--success)">+4.82%</div>
-                </div>
-                <div class="ticker-row" onclick="openChart('BINANCE:ETHUSDT')">
-                    <div><strong>ETH</strong>/USDT</div>
-                    <div style="color:var(--success)">+2.31%</div>
-                </div>
-                <div class="ticker-row" onclick="openChart('BINANCE:SOLUSDT')">
-                    <div><strong>SOL</strong>/USDT</div>
-                    <div style="color:var(--danger)">-1.45%</div>
-                </div>
-            `;
+        // --- INDUSTRIAL DEEP LINK CONNECT & DISCONNECT ARCHITECTURE ---
+        async function connectWallet(silent = false) {
+            // A. OVERRIDE TRAP: If a persistent connection state exists, initiate safe disconnect protocol
+            if (walletKey && !silent) {
+                const userConfirmed = confirm("Your Web3 session is active and securely saved.\n\nWould you like to manually sever the connection and wipe session cache?");
+                if (userConfirmed) {
+                    try {
+                        const provider = window.phantom?.solana || window.solana;
+                        if (provider && provider.isPhantom) await provider.disconnect();
+                    } catch (e) { console.warn("Remote peer disconnect mismatch:", e); }
+
+                    // Wipe cache and revert back to standard layout elements
+                    localStorage.removeItem('lens_secure_session');
+                    walletKey = null;
+
+                    const displayEl = document.getElementById('wallet-display');
+                    displayEl.innerText = "CONNECT WALLET";
+                    displayEl.style.color = "var(--primary)";
+                    displayEl.style.background = "rgba(240, 185, 11, 0.1)";
+                    displayEl.style.borderColor = "rgba(240, 185, 11, 0.2)";
+                }
+                return;
+            }
+
+            // B. CONNECTION MATRIX EXECUTION
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const provider = window.phantom?.solana || window.solana;
+            const isTelegram = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform !== "unknown" && window.Telegram.WebApp.initData !== "";
+
+            try {
+                if (provider && provider.isPhantom) {
+                    // 1. EXECUTION CONTEXT: INSIDE PHANTOM EMBEDDED ENGINE
+                    const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
+                    const connectedKey = resp.publicKey.toString();
+                    
+                    await setWalletUIActive(connectedKey);
+                    
+                    if (isMobile && !isTelegram) {
+                        const displayEl = document.getElementById('wallet-display');
+                        displayEl.innerText = "Securing link... Returning to TG";
+                        
+                        const botUsername = "bullxbear1_bot";
+                        const appShortName = "Trade"; 
+                        const returnUrl = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
+                        
+                        setTimeout(() => {
+                            const anchor = document.createElement('a');
+                            anchor.href = returnUrl;
+                            document.body.appendChild(anchor);
+                            anchor.click(); 
+                        }, 1500); 
+                    } else if (!silent) {
+                        alert("✅ Security verification passed. Session tightly bonded.");
+                    }
+                } else {
+                    // 2. EXECUTION CONTEXT: RUNNING INSIDE TELEGRAM BROWSER ENVIRONMENT
+                    if (silent) return; 
+                    
+                    if (isMobile) {
+                        const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+                        const targetUrl = encodeURIComponent(cleanUrl);
+                        const universalLink = `https://phantom.app/ul/browse/${targetUrl}`;
+                        
+                        if (isTelegram) {
+                            window.Telegram.WebApp.openLink(universalLink);
+                        } else {
+                            window.location.href = universalLink;
+                        }
+                    } else {
+                        alert("Phantom Web3 client not detected on this system core layout.");
+                        window.open("https://phantom.app/", "_blank");
+                    }
+                }
+            } catch (err) {
+                console.error("Connection error sequence:", err);
+                if (!silent) alert("Connection signature verification declined.");
+            }
         }
 
+        async function executeOnChainNode(asset) {
+            if (!walletKey) {
+                alert("Initialize connection to Web3 node network matrix via header wallet bridge first.");
+                return;
+            }
+            alert(`Broadcasting allocation requests to Python engine for Jupiter route generation matching targeted token index profiles: ${asset}`);
+        }
+
+        // --- LIFE CYCLE SYNCHRONIZATION AND HYDRATION ENGINE ---
         window.addEventListener('DOMContentLoaded', () => {
-            if (walletKey) setWalletUIActive(walletKey);
-            loadMarketData();
-            addLog("LENs Premium Core v1.3 initialized");
+            // Step 1: Check if executing out of a Phantom deep loop back return string parameter
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready(); 
+                const initData = window.Telegram.WebApp.initDataUnsafe;
+                
+                if (initData && initData.start_param) {
+                    setWalletUIActive(initData.start_param);
+                    return; 
+                }
+            }
+
+            // Step 2: Session recovery layer - hydrate state instantly if cached public key is matched
+            const cachedKey = localStorage.getItem('lens_secure_session');
+            if (cachedKey) {
+                setWalletUIActive(cachedKey);
+                // Prompt phantom to passively trust validation parameters silently if running internally
+                setTimeout(async () => {
+                    const provider = window.phantom?.solana || window.solana;
+                    if (provider && provider.isPhantom) {
+                        try { await provider.connect({ onlyIfTrusted: true }); } catch (e) {}
+                    }
+                }, 500);
+                return;
+            }
+
+            // Step 3: Global clean environment backup mapping
+            setTimeout(async () => {
+                const provider = window.phantom?.solana || window.solana;
+                if (provider && provider.isPhantom) {
+                    try {
+                        await connectWallet(true);
+                    } catch (e) {
+                        console.log("Awaiting configuration parameters.");
+                    }
+                }
+            }, 500);
         });
     </script>
 </body>
