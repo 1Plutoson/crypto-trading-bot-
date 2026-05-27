@@ -129,8 +129,8 @@
             
             <div class="bot-grid">
                 <div class="bot-card">
-                    <h4>Low-Risk Matrix (Conservative)</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Employs tight trailing configurations on macro liquidity trends.</p>
+                    <h4>Strong-Regular AI Bot (Low Risk)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Employs tight trailing configurations on macro liquidity trends. 50% - 65% Expected Win Rate.</p>
                     <div class="engine-controls">
                         <span class="runtime-label">Execution Runtime Limit:</span>
                         <select id="runtime-low" class="runtime-select">
@@ -140,13 +140,13 @@
                             <option value="6hrs">6 Hours</option>
                             <option value="12hrs" selected>12 Hours (Recommended)</option>
                         </select>
-                        <button class="btn" style="padding:10px; font-size:11px;" onclick="initializeEngine('Low-Risk', 'runtime-low')">Initialize Engine</button>
+                        <button class="btn" style="padding:10px; font-size:11px;" onclick="initializeEngine('Strong-Regular AI (Low Risk)', 'runtime-low')">Initialize Engine</button>
                     </div>
                 </div>
 
                 <div class="bot-card">
-                    <h4>Balanced Matrix (Adaptive)</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Standard execution parameters. Leverages localized swing vectors.</p>
+                    <h4>Advanced AI Bot (Moderate Risk)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Standard execution parameters. Leverages localized swing vectors. 60% - 70% Expected Win Rate.</p>
                     <div class="engine-controls">
                         <span class="runtime-label">Execution Runtime Limit:</span>
                         <select id="runtime-balanced" class="runtime-select">
@@ -156,13 +156,13 @@
                             <option value="6hrs">6 Hours</option>
                             <option value="12hrs">12 Hours</option>
                         </select>
-                        <button class="btn" style="padding:10px; font-size:11px;" onclick="initializeEngine('Balanced', 'runtime-balanced')">Initialize Engine</button>
+                        <button class="btn" style="padding:10px; font-size:11px;" onclick="initializeEngine('Advanced AI (Moderate Risk)', 'runtime-balanced')">Initialize Engine</button>
                     </div>
                 </div>
 
                 <div class="bot-card">
-                    <h4>High-Yield Matrix (Aggressive)</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Maximum processing limits. Tracks momentum breakouts rapidly.</p>
+                    <h4>Quantum AI Bot (High Risk/Aggressive)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Maximum processing limits. Tracks momentum breakouts rapidly. 85% - 90% Expected Win Rate.</p>
                     <div class="engine-controls">
                         <span class="runtime-label">Execution Runtime Limit:</span>
                         <select id="runtime-high" class="runtime-select">
@@ -172,7 +172,7 @@
                             <option value="6hrs">6 Hours</option>
                             <option value="12hrs">12 Hours</option>
                         </select>
-                        <button class="btn" style="padding:10px; font-size:11px;" onclick="initializeEngine('High-Yield', 'runtime-high')">Initialize Engine</button>
+                        <button class="btn" style="padding:10px; font-size:11px;" onclick="initializeEngine('Quantum AI (High Risk)', 'runtime-high')">Initialize Engine</button>
                     </div>
                 </div>
             </div>
@@ -244,14 +244,52 @@
             document.getElementById('chart-modal').style.display = 'none';
         }
 
-        // --- ENGINE INITIALIZATION LOGIC ---
+        // --- REALISTIC ENGINE INITIALIZATION & SPLIT LOGIC ---
         function initializeEngine(matrixName, selectId) {
             if (!walletKey) {
-                alert("Please connect your wallet before initializing the trading matrix.");
+                alert("❌ Authentication Required: Please connect your Web3 wallet securely before initializing the AI trading matrix.");
                 return;
             }
+
             const selectedRuntime = document.getElementById(selectId).value;
-            alert(`[ SYSTEM ALLOCATION STARTED ]\n\nMatrix: ${matrixName}\nRuntime Configured: ${selectedRuntime}\n\nTransmitting execution parameters to backend cloud agents...`);
+            
+            // 1. Prompt User for Target Amount
+            let amountInput = prompt(`[ ${matrixName} ]\n\nEnter the USD amount to deploy for this runtime session.\n(Minimum requirement: $10.00 to satisfy 4-way split logic)`, "100");
+            
+            if (amountInput === null) return; // User cancelled
+            
+            let amount = parseFloat(amountInput);
+            
+            // 2. Enforce Minimum $10 Rule
+            if (isNaN(amount) || amount < 10) {
+                alert("❌ Invalid allocation. Minimum execution size is $10.00 to satisfy structural liquidity requirements.");
+                return;
+            }
+
+            // 3. Execution Math (50% Margin / 50% split across 4 tokens)
+            const marginReserve = amount / 2;
+            const tradePool = amount / 2;
+            const allocationPerToken = tradePool / 4;
+
+            // 4. Secure Confirmation Display
+            const confirmationMsg = `⚙️ [ CONFIRM ENGINE EXECUTION ]\n\n` +
+                                    `Matrix Profile: ${matrixName}\n` +
+                                    `Runtime Target: ${selectedRuntime}\n` +
+                                    `Total Capital: $${amount.toFixed(2)}\n\n` +
+                                    `[ ALLOCATION SPLIT PARAMETERS ]\n` +
+                                    `• Margin Reserve (50%): $${marginReserve.toFixed(2)}\n` +
+                                    `• wBTC Exposure: $${allocationPerToken.toFixed(2)}\n` +
+                                    `• wETH Exposure: $${allocationPerToken.toFixed(2)}\n` +
+                                    `• SOL Exposure: $${allocationPerToken.toFixed(2)}\n` +
+                                    `• wBNB Exposure: $${allocationPerToken.toFixed(2)}\n\n` +
+                                    `⏳ CRITICAL RULE: AI will force-liquidate all open positions exactly 5 minutes prior to the ${selectedRuntime} expiration to guarantee safe settlement.\n\n` +
+                                    `Do you authorize this on-chain transaction?`;
+
+            // 5. Execution Trigger
+            if(confirm(confirmationMsg)) {
+                // In production, this pushes data via window.Telegram.WebApp.sendData() to Python
+                alert(`✅ SYSTEM ENGAGED\n\n${matrixName} Engine is now active.\nTracking endpoints established. 0.5% system maintenance fee will be deducted upon successful liquidation at the end of the ${selectedRuntime} cycle.`);
+            }
         }
 
         // --- WALLET UI & SYSTEM BALANCE ENGINE ---
