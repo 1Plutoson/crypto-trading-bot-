@@ -206,54 +206,87 @@
             document.getElementById('chart-modal').style.display = 'none';
         }
 
-        // --- WALLET UI RENDERER ---
-        function setWalletUIActive(key) {
+        // --- WALLET UI & BALANCE RENDERER (UPGRADED) ---
+        async function setWalletUIActive(key) {
             walletKey = key;
             const displayEl = document.getElementById('wallet-display');
-            displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)}`;
+            
+            // Show loading state first
+            displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)} | Fetching...`;
             displayEl.style.color = "#0ecb81"; 
             displayEl.style.borderColor = "rgba(14, 203, 129, 0.2)";
             displayEl.style.background = "rgba(14, 203, 129, 0.1)";
+
+            try {
+                // Fetch live SOL balance using the injected web3.js library
+                const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'));
+                const pubKey = new solanaWeb3.PublicKey(key);
+                const balance = await connection.getBalance(pubKey);
+                
+                // Convert lamports to SOL and format to 3 decimals
+                const solBalance = (balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
+                
+                // Display Key + Balance
+                displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)} | ${solBalance} SOL`;
+            } catch (e) {
+                console.error("Balance fetch failed", e);
+                displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)} | 0.00 SOL`;
+            }
         }
 
-        // --- "SAFE BRIDGE" CONNECTION LOGIC ---
+        // --- BULLETPROOF WALLET CONNECTION ENGINE (CRASH-FREE) ---
         async function connectWallet(silent = false) {
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             const provider = window.phantom?.solana || window.solana;
 
             try {
                 if (provider && provider.isPhantom) {
-                    // Already inside an environment that supports Phantom (like its browser)
+                    // 1. WE ARE ALREADY IN PHANTOM APP
                     const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
                     const connectedKey = resp.publicKey.toString();
-                    setWalletUIActive(connectedKey);
                     
-                    // If we are in the Phantom App but outside Telegram, jump back
+                    // Render the UI with the balance
+                    await setWalletUIActive(connectedKey);
+                    
+                    // Loop-back: If on mobile but NOT inside Telegram, snap back
                     if (isMobile && !window.Telegram?.WebApp?.initData) {
                         const botUsername = "bullxbear1_bot";
                         const appShortName = "Trade"; 
-                        window.location.href = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
+                        
+                        // Wait 2 seconds so the user can see their balance loaded, then redirect
+                        setTimeout(() => {
+                            window.location.href = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
+                        }, 2000); 
                     } else if (!silent) {
                         alert("✅ Phantom Wallet Successfully Connected!");
                     }
                 } else {
-                    // WE ARE IN TELEGRAM: Trigger the safe deep-link to Phantom
+                    // 2. WE ARE IN TELEGRAM (Fixing the crash here)
+                    if (silent) return; // Fail-safe exit for background automated checks
+                    
                     if (isMobile) {
-                        const currentUrl = encodeURIComponent(window.location.href);
-                        // Use a standard location redirect to prevent WebView crash
-                        window.location.href = `phantom://browse/${currentUrl}`;
+                        // CRITICAL FIX: Use Phantom's HTTPS Universal Link instead of phantom://
+                        const targetUrl = encodeURIComponent(window.location.href.split('?')[0]);
+                        const universalLink = `https://phantom.app/ul/browse/${targetUrl}`;
+                        
+                        // CRITICAL FIX: Use Telegram's native openLink API to safely break out of the WebView
+                        if (window.Telegram && window.Telegram.WebApp) {
+                            window.Telegram.WebApp.openLink(universalLink);
+                        } else {
+                            window.open(universalLink, '_blank');
+                        }
                     } else {
-                        alert("Phantom Wallet not detected. Please ensure it is installed.");
+                        alert("Phantom Wallet not detected. Please ensure the extension is installed.");
                         window.open("https://phantom.app/", "_blank");
                     }
                 }
             } catch (err) {
                 console.error("Connection error:", err);
-                if (!silent) alert("Connection declined by user or app.");
+                if (!silent) alert("Connection declined by user or interrupted.");
             }
         }
 
-        // On-chain interaction
+        // On-chain interaction handling
         async function executeOnChainNode(asset) {
             if (!walletKey) {
                 alert("Initialize connection to Web3 node network matrix via header wallet bridge first.");
@@ -270,10 +303,10 @@
                 window.Telegram.WebApp.ready(); // Inform Telegram the app is fully loaded
                 const initData = window.Telegram.WebApp.initDataUnsafe;
                 
-                // If Phantom passed the key to Telegram, and Telegram passed it to us here:
+                // If Phantom passed the key to Telegram, catch it here:
                 if (initData && initData.start_param) {
                     setWalletUIActive(initData.start_param);
-                    return; // Halt further execution, we are successfully looped back!
+                    return; // Halt further execution, successfully looped back!
                 }
             }
 
