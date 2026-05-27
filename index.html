@@ -63,6 +63,12 @@
         /* --- BOT GRID ENGINE --- */
         .bot-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
         .bot-card { background: var(--surface-card); border-left: 4px solid var(--primary); padding: 15px; border-radius: 8px; }
+        
+        /* --- RUNTIME DROPDOWN UI --- */
+        .engine-controls { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .runtime-select { width: 100%; padding: 10px; background: rgba(0,0,0,0.3); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; appearance: none; }
+        .runtime-select:focus { border-color: var(--primary); }
+        .runtime-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* --- BOTTOM NAV BAR --- */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; padding: 12px 0; z-index: 100; }
@@ -125,17 +131,49 @@
                 <div class="bot-card">
                     <h4>Low-Risk Matrix (Conservative)</h4>
                     <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Employs tight trailing configurations on macro liquidity trends.</p>
-                    <button class="btn" style="padding:8px; font-size:11px;" onclick="alert('Low-Risk Engine Synchronized')">Initialize Engine</button>
+                    <div class="engine-controls">
+                        <span class="runtime-label">Execution Runtime Limit:</span>
+                        <select id="runtime-low" class="runtime-select">
+                            <option value="30mins">30 Minutes</option>
+                            <option value="1hr">1 Hour</option>
+                            <option value="3hrs">3 Hours</option>
+                            <option value="6hrs">6 Hours</option>
+                            <option value="12hrs" selected>12 Hours (Recommended)</option>
+                        </select>
+                        <button class="btn" style="padding:10px; font-size:11px;" onclick="initializeEngine('Low-Risk', 'runtime-low')">Initialize Engine</button>
+                    </div>
                 </div>
+
                 <div class="bot-card">
                     <h4>Balanced Matrix (Adaptive)</h4>
                     <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Standard execution parameters. Leverages localized swing vectors.</p>
-                    <button class="btn" style="padding:8px; font-size:11px;" onclick="alert('Balanced Engine Synchronized')">Initialize Engine</button>
+                    <div class="engine-controls">
+                        <span class="runtime-label">Execution Runtime Limit:</span>
+                        <select id="runtime-balanced" class="runtime-select">
+                            <option value="30mins">30 Minutes</option>
+                            <option value="1hr">1 Hour</option>
+                            <option value="3hrs" selected>3 Hours (Recommended)</option>
+                            <option value="6hrs">6 Hours</option>
+                            <option value="12hrs">12 Hours</option>
+                        </select>
+                        <button class="btn" style="padding:10px; font-size:11px;" onclick="initializeEngine('Balanced', 'runtime-balanced')">Initialize Engine</button>
+                    </div>
                 </div>
+
                 <div class="bot-card">
                     <h4>High-Yield Matrix (Aggressive)</h4>
                     <p style="font-size:12px; color:var(--text-muted); margin: 5px 0 10px 0;">Maximum processing limits. Tracks momentum breakouts rapidly.</p>
-                    <button class="btn" style="padding:8px; font-size:11px;" onclick="alert('High-Yield Engine Synchronized')">Initialize Engine</button>
+                    <div class="engine-controls">
+                        <span class="runtime-label">Execution Runtime Limit:</span>
+                        <select id="runtime-high" class="runtime-select">
+                            <option value="30mins" selected>30 Minutes (Recommended)</option>
+                            <option value="1hr">1 Hour</option>
+                            <option value="3hrs">3 Hours</option>
+                            <option value="6hrs">6 Hours</option>
+                            <option value="12hrs">12 Hours</option>
+                        </select>
+                        <button class="btn" style="padding:10px; font-size:11px;" onclick="initializeEngine('High-Yield', 'runtime-high')">Initialize Engine</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -148,7 +186,7 @@
             
             <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
                 <span style="font-size: 12px; color: var(--text-muted);">Current Allocation Target:</span>
-                <div style="font-size: 18px; font-weight: bold; color: var(--primary); margin-top: 5px;">$100.00 Splitting Matrix Matrix</div>
+                <div style="font-size: 18px; font-weight: bold; color: var(--primary); margin-top: 5px;">$100.00 Splitting Matrix</div>
                 <div style="font-size: 11px; color: var(--success); margin-top: 3px;">Includes integrated 0.5% Web Maintenance Fee extraction.</div>
             </div>
 
@@ -206,10 +244,19 @@
             document.getElementById('chart-modal').style.display = 'none';
         }
 
+        // --- ENGINE INITIALIZATION LOGIC ---
+        function initializeEngine(matrixName, selectId) {
+            if (!walletKey) {
+                alert("Please connect your wallet before initializing the trading matrix.");
+                return;
+            }
+            const selectedRuntime = document.getElementById(selectId).value;
+            alert(`[ SYSTEM ALLOCATION STARTED ]\n\nMatrix: ${matrixName}\nRuntime Configured: ${selectedRuntime}\n\nTransmitting execution parameters to backend cloud agents...`);
+        }
+
         // --- WALLET UI & SYSTEM BALANCE ENGINE ---
         async function setWalletUIActive(key) {
             walletKey = key;
-            // Instantly commit the mapping state to local machine cache to handle refreshes
             localStorage.setItem('lens_secure_session', key);
 
             const displayEl = document.getElementById('wallet-display');
@@ -219,12 +266,10 @@
             displayEl.style.background = "rgba(14, 203, 129, 0.1)";
 
             try {
-                // Instantiating standard Mainnet connection pool under confirmed commitment level
                 const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
                 const pubKey = new solanaWeb3.PublicKey(key);
                 const balance = await connection.getBalance(pubKey);
                 
-                // Real-time precise fractional calculation
                 const solBalance = (balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
                 displayEl.innerText = `${key.slice(0,4)}...${key.slice(-4)} | ${solBalance} SOL`;
             } catch (e) {
@@ -235,7 +280,6 @@
 
         // --- INDUSTRIAL DEEP LINK CONNECT & DISCONNECT ARCHITECTURE ---
         async function connectWallet(silent = false) {
-            // A. OVERRIDE TRAP: If a persistent connection state exists, initiate safe disconnect protocol
             if (walletKey && !silent) {
                 const userConfirmed = confirm("Your Web3 session is active and securely saved.\n\nWould you like to manually sever the connection and wipe session cache?");
                 if (userConfirmed) {
@@ -244,7 +288,6 @@
                         if (provider && provider.isPhantom) await provider.disconnect();
                     } catch (e) { console.warn("Remote peer disconnect mismatch:", e); }
 
-                    // Wipe cache and revert back to standard layout elements
                     localStorage.removeItem('lens_secure_session');
                     walletKey = null;
 
@@ -257,14 +300,12 @@
                 return;
             }
 
-            // B. CONNECTION MATRIX EXECUTION
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             const provider = window.phantom?.solana || window.solana;
             const isTelegram = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform !== "unknown" && window.Telegram.WebApp.initData !== "";
 
             try {
                 if (provider && provider.isPhantom) {
-                    // 1. EXECUTION CONTEXT: INSIDE PHANTOM EMBEDDED ENGINE
                     const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
                     const connectedKey = resp.publicKey.toString();
                     
@@ -288,7 +329,6 @@
                         alert("✅ Security verification passed. Session tightly bonded.");
                     }
                 } else {
-                    // 2. EXECUTION CONTEXT: RUNNING INSIDE TELEGRAM BROWSER ENVIRONMENT
                     if (silent) return; 
                     
                     if (isMobile) {
@@ -322,7 +362,6 @@
 
         // --- LIFE CYCLE SYNCHRONIZATION AND HYDRATION ENGINE ---
         window.addEventListener('DOMContentLoaded', () => {
-            // Step 1: Check if executing out of a Phantom deep loop back return string parameter
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.ready(); 
                 const initData = window.Telegram.WebApp.initDataUnsafe;
@@ -333,11 +372,9 @@
                 }
             }
 
-            // Step 2: Session recovery layer - hydrate state instantly if cached public key is matched
             const cachedKey = localStorage.getItem('lens_secure_session');
             if (cachedKey) {
                 setWalletUIActive(cachedKey);
-                // Prompt phantom to passively trust validation parameters silently if running internally
                 setTimeout(async () => {
                     const provider = window.phantom?.solana || window.solana;
                     if (provider && provider.isPhantom) {
@@ -347,7 +384,6 @@
                 return;
             }
 
-            // Step 3: Global clean environment backup mapping
             setTimeout(async () => {
                 const provider = window.phantom?.solana || window.solana;
                 if (provider && provider.isPhantom) {
