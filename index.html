@@ -363,8 +363,24 @@
         let currentOrdersMemoryList = [];
         let executionHistoryMemoryList = [];
 
-        // ON-LOAD INITIALIZATION TRIGGER
+        // ON-LOAD INITIALIZATION TRIGGER (UPGRADED FOR LOOP-BACK DATA)
         window.addEventListener('DOMContentLoaded', async () => {
+            
+            // 1. Telegram Loop-Back Catch
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready();
+                const initData = window.Telegram.WebApp.initDataUnsafe;
+                if (initData && initData.start_param) {
+                    handleWalletConnectionSuccess(initData.start_param);
+                }
+            }
+
+            // 2. LocalStorage Cache Hydration (Keeps session intact across reloads)
+            const cachedKey = localStorage.getItem('lens_secure_session');
+            if (cachedKey && !activeWalletAccount) {
+                handleWalletConnectionSuccess(cachedKey);
+            }
+
             loadStateFromLocalStorage();
             await synchronizeSolanaPriceTickerFeed();
             setInterval(synchronizeSolanaPriceTickerFeed, 10000); // 10s auto refresh oracle ticker
@@ -377,7 +393,6 @@
         async function synchronizeSolanaPriceTickerFeed() {
             const livePriceDisplay = document.getElementById('solLivePrice');
             try {
-                // Primary CORS-friendly lightning fast Binance open feed
                 const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT');
                 if (!response.ok) throw new Error('Primary matrix feed rate limit reached');
                 const data = await response.json();
@@ -387,7 +402,6 @@
             } catch (err) {
                 console.warn('Binance feed bypassed, shifting to fallback oracle array...', err);
                 try {
-                    // Secondary failover path
                     const backupResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
                     const backupData = await backupResponse.json();
                     solanaSpotPriceUsd = parseFloat(backupData.solana.usd);
@@ -407,7 +421,6 @@
             const provider = window?.phantom?.solana || window?.solana;
             if (provider?.isPhantom) {
                 console.log('Phantom Cryptographic Engine found and primed.');
-                // Event loops listeners if user changes accounts or disconnects natively inside Phantom
                 provider.on('accountChanged', (publicKey) => {
                     if (publicKey) {
                         handleWalletConnectionSuccess(publicKey);
@@ -415,43 +428,96 @@
                         handleWalletDisconnectState();
                     }
                 });
+
+                // Auto-connect natively in the background if the environment inherently trusts it
+                if (!activeWalletAccount) {
+                    provider.connect({ onlyIfTrusted: true })
+                        .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
+                        .catch(() => {});
+                }
             }
         }
 
-        // PHANTOM CRYPTOGRAPHIC TOGGLE INTERFACE ACTUATOR
-        async function toggleWalletConnect() {
+        // --- BULLETPROOF WALLET CONNECTION ENGINE (UPGRADED) ---
+        async function toggleWalletConnect(silent = false) {
             const provider = window?.phantom?.solana || window?.solana;
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const isTelegram = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform !== "unknown" && window.Telegram.WebApp.initData !== "";
             
-            if (activeWalletAccount) {
+            if (activeWalletAccount && !silent) {
                 // Disconnect option
-                handleWalletDisconnectState();
-                triggerToast('WALLET DISCONNECTED', 'Phantom hardware module unlinked from runtime matrix.', 'info');
-                return;
-            }
-
-            if (!provider?.isPhantom) {
-                // Phantom fallback configuration: auto-initiate Demo Framework Mode smoothly so the user never breaks flow
-                isDemoModeActive = true;
-                activeWalletAccount = "DEMO_MATRIX_ROUTING_KEY_77X99";
-                document.getElementById('addDemoFundsBtn').classList.remove('hidden');
-                updateWalletUiStates(true);
-                triggerToast('DEMO ENGINE MODE ACTIVE', 'Phantom not detected. Enabled Pro Sandbox Framework with demo SOL allocation.', 'info');
-                await querySolanaBalanceNode();
+                const confirmDisconnect = confirm("Your wallet is securely connected.\n\nDo you wish to disconnect and terminate this session?");
+                if (confirmDisconnect) {
+                    try { if (provider && provider.isPhantom) await provider.disconnect(); } catch (e) {}
+                    handleWalletDisconnectState();
+                    triggerToast('WALLET DISCONNECTED', 'Phantom hardware module unlinked from runtime matrix.', 'info');
+                }
                 return;
             }
 
             try {
-                const resp = await provider.connect();
-                handleWalletConnectionSuccess(resp.publicKey);
-                triggerToast('CRYPTO WALLET CONNECTED', 'Phantom wallet secure handshake verified successfully.', 'success');
+                if (provider && provider.isPhantom) {
+                    // 1. ALREADY IN PHANTOM APP OR DESKTOP EXTENSION
+                    const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
+                    const connectedKey = resp.publicKey.toString();
+                    
+                    handleWalletConnectionSuccess(connectedKey);
+                    
+                    // Loop-back: If on mobile but NOT inside Telegram, snap back seamlessly to Web App
+                    if (isMobile && !isTelegram) {
+                        triggerToast('SECURING SESSION', 'Returning to Telegram to finalize handshake...', 'info');
+
+                        const botUsername = "bullxbear1_bot"; // Change this string if your Bot Father username differs
+                        const appShortName = "Trade"; // Change this string if your Bot Father Short Name differs
+                        
+                        setTimeout(() => {
+                            const returnUrl = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
+                            const anchor = document.createElement('a');
+                            anchor.href = returnUrl;
+                            document.body.appendChild(anchor);
+                            anchor.click(); // Forces native OS handoff
+                        }, 1500);
+                    } else if (!silent) {
+                        triggerToast('CRYPTO WALLET CONNECTED', 'Phantom wallet secure handshake verified successfully.', 'success');
+                    }
+                } else {
+                    // 2. WE ARE IN TELEGRAM OR EXTERNAL BROWSER WITHOUT EXTENSION
+                    if (silent) return;
+
+                    if (isMobile) {
+                        // DEEP LINK TO PHANTOM APP NATIVELY
+                        const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+                        const targetUrl = encodeURIComponent(cleanUrl);
+                        const universalLink = `https://phantom.app/ul/browse/${targetUrl}`;
+                        
+                        if (isTelegram) {
+                            window.Telegram.WebApp.openLink(universalLink);
+                        } else {
+                            window.location.href = universalLink;
+                        }
+                    } else {
+                        // Phantom fallback configuration: auto-initiate Demo Framework Mode smoothly so the user never breaks flow
+                        isDemoModeActive = true;
+                        activeWalletAccount = "DEMO_MATRIX_ROUTING_KEY_77X99";
+                        document.getElementById('addDemoFundsBtn').classList.remove('hidden');
+                        updateWalletUiStates(true);
+                        triggerToast('DEMO ENGINE MODE ACTIVE', 'Phantom not detected. Enabled Pro Sandbox Framework with demo SOL allocation.', 'info');
+                        await querySolanaBalanceNode();
+                    }
+                }
             } catch (err) {
                 console.error('Wallet connection refused:', err);
-                triggerToast('CONNECTION REFUSED', 'Handshake aborted by cryptographic authority user.', 'error');
+                if (!silent) triggerToast('CONNECTION REFUSED', 'Handshake aborted by cryptographic authority user.', 'error');
             }
         }
 
+        // --- SESSION PERSISTENCE HANDLERS ---
         function handleWalletConnectionSuccess(publicKey) {
             activeWalletAccount = publicKey.toString();
+            
+            // Persist the cryptographic string to local cache!
+            localStorage.setItem('lens_secure_session', activeWalletAccount); 
+            
             isDemoModeActive = false;
             document.getElementById('addDemoFundsBtn').classList.add('hidden');
             updateWalletUiStates(true);
@@ -460,6 +526,10 @@
 
         function handleWalletDisconnectState() {
             activeWalletAccount = null;
+            
+            // Purge the session from local cache!
+            localStorage.removeItem('lens_secure_session'); 
+            
             isDemoModeActive = false;
             realWalletSolBalance = 0.0000;
             document.getElementById('addDemoFundsBtn').classList.add('hidden');
