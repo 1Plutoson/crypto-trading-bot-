@@ -490,17 +490,8 @@
 
             loadStateFromLocalStorage();
             await synchronizeSolanaPriceTickerFeed();
-            
-            // INTERVALS
             setInterval(synchronizeSolanaPriceTickerFeed, 10000); 
             setInterval(updateActiveOpenPositionsRealtimeClocks, 1000); 
-            
-            // ---------------------------------------------------------
-            // UPGRADE: 15-second strict wallet balance refresh loop
-            // for absolute accuracy, accountancy, and accountability.
-            // ---------------------------------------------------------
-            setInterval(querySolanaBalanceNode, 15000); 
-
             refreshStateLedgersInterface();
             detectPhantomAvailabilityOnLaunch();
         });
@@ -572,39 +563,32 @@
             }
         }
 
-        // ---------------------------------------------------------
-        // UPGRADE: AUTO DETECTION MODULE FOR PHANTOM WEB3 CONTAINER
-        // Seamlessly attempts auto-connect, keeping data intact.
-        // ---------------------------------------------------------
+        // AUTO DETECTION MODULE FOR PHANTOM WEB3 CONTAINER
         function detectPhantomAvailabilityOnLaunch() {
             const provider = window?.phantom?.solana || window?.solana;
             if (provider?.isPhantom) {
                 provider.on('accountChanged', (publicKey) => {
                     if (publicKey) {
-                        handleWalletConnectionSuccess(publicKey.toString());
+                        handleWalletConnectionSuccess(publicKey);
                     } else {
                         handleWalletDisconnectState();
                     }
                 });
 
                 if (!activeWalletAccount) {
-                    // Force an automatic silent handshake using trusted contexts
-                    provider.connect({ onlyIfTrusted: true })
-                        .then((resp) => {
-                            handleWalletConnectionSuccess(resp.publicKey.toString());
-                            triggerToast('AUTO-SYNC COMPLETE', 'Wallet automatically detected and reconnected securely.', 'success');
-                        })
-                        .catch(() => {
-                            // Loop-Back Catch: If onlyIfTrusted fails but we have autoConnect param,
-                            // trigger full prompt to maintain intent.
-                            const urlParams = new URLSearchParams(window.location.search);
-                            const isAutoConnect = urlParams.get('autoConnect') === 'true';
-                            if (isAutoConnect) {
-                                provider.connect()
-                                    .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
-                                    .catch(() => {});
-                            }
-                        });
+                    // Auto-Trigger Handshake detection inside Phantom Browser
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const isAutoConnect = urlParams.get('autoConnect') === 'true';
+                    
+                    if (isAutoConnect) {
+                        provider.connect()
+                            .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
+                            .catch(() => {});
+                    } else {
+                        provider.connect({ onlyIfTrusted: true })
+                            .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
+                            .catch(() => {});
+                    }
                 }
             }
         }
@@ -658,7 +642,7 @@
 
         function handleWalletConnectionSuccess(publicKey) {
             activeWalletAccount = publicKey.toString();
-            // Tenant Isolated Storage Binding keeps data fully intact
+            // Tenant Isolated Storage Binding
             localStorage.setItem(`lens_secure_session_${activeTenantId}`, activeWalletAccount); 
             
             isDemoModeActive = false;
@@ -715,9 +699,6 @@
             }
         }
 
-        // ---------------------------------------------------------
-        // LIVE BALANCE QUERY (Triggers initially and every 15s)
-        // ---------------------------------------------------------
         async function querySolanaBalanceNode() {
             if (!activeWalletAccount || isDemoModeActive) {
                 updateBalanceDisplayValues();
@@ -730,8 +711,7 @@
                 realWalletSolBalance = lamports / solanaWeb3.LAMPORTS_PER_SOL;
                 updateBalanceDisplayValues();
             } catch (err) {
-                // If RPC limits are hit, fall back gracefully to a mock balance or maintain last known
-                if (realWalletSolBalance === 0) realWalletSolBalance = 0.0542; 
+                realWalletSolBalance = 0.0542; 
                 updateBalanceDisplayValues();
             }
         }
