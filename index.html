@@ -576,13 +576,19 @@
                 });
 
                 if (!activeWalletAccount) {
-                    // Auto-Trigger Handshake detection
+                    // Auto-Trigger Handshake detection inside Phantom Browser
                     const urlParams = new URLSearchParams(window.location.search);
                     const isAutoConnect = urlParams.get('autoConnect') === 'true';
                     
-                    provider.connect(isAutoConnect ? undefined : { onlyIfTrusted: true })
-                        .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
-                        .catch(() => {});
+                    if (isAutoConnect) {
+                        provider.connect()
+                            .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
+                            .catch(() => {});
+                    } else {
+                        provider.connect({ onlyIfTrusted: true })
+                            .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
+                            .catch(() => {});
+                    }
                 }
             }
         }
@@ -603,44 +609,31 @@
                 return;
             }
 
+            // Force Open Phantom App seamlessly if we are inside Telegram Mobile
+            if (isMobile && isTelegram) {
+                const currentAppUrl = window.location.href.split('?')[0].split('#')[0] + '?autoConnect=true';
+                const targetUrl = encodeURIComponent(currentAppUrl);
+                const phantomUniversalLink = `https://phantom.app/ul/browse/${targetUrl}`;
+                
+                window.Telegram.WebApp.openLink(phantomUniversalLink);
+                return; 
+            }
+
+            // Standard connection execution (Desktop or inside Phantom Browser)
             try {
                 if (provider && provider.isPhantom) {
                     const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
-                    const connectedKey = resp.publicKey.toString();
-                    
-                    handleWalletConnectionSuccess(connectedKey);
-                    
-                    // If connection is successful inside mobile Phantom browser, force loopback to TG
-                    if (isMobile && !isTelegram) {
-                        triggerToast('SECURING SESSION', 'Returning to Telegram WebApp to finalize connection data...', 'info');
-                        setTimeout(() => {
-                            window.location.href = `https://t.me/bullxbear1_bot/Trade?startapp=${connectedKey}`;
-                        }, 1000);
-                    } else if (!silent) {
-                        triggerToast('CRYPTO WALLET CONNECTED', 'Phantom wallet secure handshake verified successfully.', 'success');
-                    }
+                    handleWalletConnectionSuccess(resp.publicKey.toString());
+                    if (!silent) triggerToast('CRYPTO WALLET CONNECTED', 'Phantom wallet secure handshake verified successfully.', 'success');
                 } else {
                     if (silent) return;
-                    if (isMobile) {
-                        // Force Open Phantom App seamlessly to handle the connection using Auto-Trigger Handshake Protocol
-                        const currentAppUrl = window.location.href.split('?')[0].split('#')[0] + '?autoConnect=true';
-                        const targetUrl = encodeURIComponent(currentAppUrl);
-                        const phantomUniversalLink = `https://phantom.app/ul/browse/${targetUrl}`;
-                        
-                        if (isTelegram) {
-                            window.Telegram.WebApp.openLink(phantomUniversalLink);
-                        } else {
-                            window.location.href = phantomUniversalLink;
-                        }
-                    } else {
-                        // Desktop Without Phantom Installed
-                        isDemoModeActive = true;
-                        activeWalletAccount = `DEMO_${activeTenantId}_ROUTING`;
-                        document.getElementById('addDemoFundsBtn').classList.remove('hidden');
-                        updateWalletUiStates(true);
-                        triggerToast('DEMO ENGINE MODE ACTIVE', 'Phantom not detected. Enabled Pro Sandbox Framework with demo SOL allocation.', 'info');
-                        await querySolanaBalanceNode();
-                    }
+                    // Desktop Without Phantom Installed -> Mock Protocol
+                    isDemoModeActive = true;
+                    activeWalletAccount = `DEMO_${activeTenantId}_ROUTING`;
+                    document.getElementById('addDemoFundsBtn').classList.remove('hidden');
+                    updateWalletUiStates(true);
+                    triggerToast('DEMO ENGINE MODE ACTIVE', 'Phantom not detected. Enabled Pro Sandbox Framework with demo SOL allocation.', 'info');
+                    await querySolanaBalanceNode();
                 }
             } catch (err) {
                 if (!silent) triggerToast('CONNECTION REFUSED', 'Handshake aborted by cryptographic authority user.', 'error');
@@ -656,6 +649,20 @@
             document.getElementById('addDemoFundsBtn').classList.add('hidden');
             updateWalletUiStates(true);
             querySolanaBalanceNode(); // Balance auto updates immediately
+
+            // ---- TELEGRAM AUTO-LOOPBACK ROUTINE FIX ----
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const isTelegram = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform && window.Telegram.WebApp.platform !== "unknown");
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAutoConnect = urlParams.get('autoConnect') === 'true';
+
+            // If we connected successfully inside the Phantom mobile browser via autoConnect, force them back immediately!
+            if (isMobile && !isTelegram && isAutoConnect) {
+                triggerToast('SECURING SESSION', 'Returning to Telegram WebApp to finalize data link...', 'info');
+                setTimeout(() => {
+                    window.location.href = `https://t.me/bullxbear1_bot/Trade?startapp=${activeWalletAccount}`;
+                }, 1000);
+            }
         }
 
         function handleWalletDisconnectState() {
