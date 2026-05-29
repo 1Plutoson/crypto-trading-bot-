@@ -496,12 +496,12 @@
 
             loadStateFromLocalStorage();
             await synchronizeSolanaPriceTickerFeed();
+            
+            // Automated Live Feed Polling
             setInterval(synchronizeSolanaPriceTickerFeed, 10000); 
+            setInterval(querySolanaBalanceNode, 15000); // <-- ADDED: Updates live balance every 15s to account for external deposits/withdrawals 
             setInterval(updateActiveOpenPositionsRealtimeClocks, 1000); 
             
-            // AUTOMATED WALLET BALANCE POLLING ENGINE (Triggers Every 15 Seconds to Ensure Accuracy on Funding)
-            setInterval(querySolanaBalanceNode, 15000); 
-
             refreshStateLedgersInterface();
             detectPhantomAvailabilityOnLaunch();
         });
@@ -573,12 +573,9 @@
             }
         }
 
-        // AUTO DETECTION MODULE FOR PHANTOM WEB3 CONTAINER WITH AUTOCONNECT REDIRECT LOOP
+        // AUTO DETECTION MODULE FOR PHANTOM WEB3 CONTAINER
         function detectPhantomAvailabilityOnLaunch() {
             const provider = window?.phantom?.solana || window?.solana;
-            const urlParams = new URLSearchParams(window.location.search);
-            const isAutoConnect = urlParams.get('autoConnect') === 'true';
-
             if (provider?.isPhantom) {
                 provider.on('accountChanged', (publicKey) => {
                     if (publicKey) {
@@ -589,28 +586,9 @@
                 });
 
                 if (!activeWalletAccount) {
-                    if (isAutoConnect) {
-                        // Force prompt for connection on auto-redirect when opening inside Phantom Browser
-                        provider.connect().then((resp) => {
-                            const connectedKey = resp.publicKey.toString();
-                            handleWalletConnectionSuccess(connectedKey);
-                            
-                            // Auto loop-back direct redirect to Telegram Bot Web App Context
-                            triggerToast('SECURING SESSION', 'Returning to Telegram to finalize handshake...', 'info');
-                            setTimeout(() => {
-                                const botUsername = "bullxbear1_bot"; 
-                                const appShortName = "Trade"; 
-                                window.location.href = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
-                            }, 1000);
-                        }).catch((err) => {
-                            triggerToast('CONNECTION REFUSED', 'Handshake aborted by cryptographic authority.', 'error');
-                        });
-                    } else {
-                        // Standard silent check on default load
-                        provider.connect({ onlyIfTrusted: true })
-                            .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
-                            .catch(() => {});
-                    }
+                    provider.connect({ onlyIfTrusted: true })
+                        .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
+                        .catch(() => {});
                 }
             }
         }
@@ -638,42 +616,32 @@
                     
                     handleWalletConnectionSuccess(connectedKey);
                     
-                    // Loop back to Telegram immediately if we are in Phantom's mobile browser and NOT natively inside Telegram WebApp yet
+                    // <-- MODIFIED: Telegram Automatic Secure Loop-back Logic
                     if (isMobile && !isTelegram) {
                         triggerToast('SECURING SESSION', 'Returning to Telegram to finalize handshake...', 'info');
                         const botUsername = "bullxbear1_bot"; 
                         const appShortName = "Trade"; 
                         setTimeout(() => {
+                            // Automatically triggers OS to launch Telegram App back up, bringing payload with it
                             window.location.href = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
-                        }, 1000);
+                        }, 1500);
                     } else if (!silent) {
                         triggerToast('CRYPTO WALLET CONNECTED', 'Phantom wallet secure handshake verified successfully.', 'success');
                     }
                 } else {
                     if (silent) return;
-                    
-                    // FORCE NATIVE PHANTOM APP OPEN LOGIC & DEEP LINK PIPELINE
-                    if (isMobile || isTelegram) {
-                        // Inject autoConnect flag to force Phantom to loop back automatically upon authorization completion.
-                        let currentUrl = new URL(window.location.href);
-                        currentUrl.searchParams.set('autoConnect', 'true');
-                        
-                        const targetUrl = encodeURIComponent(currentUrl.toString());
-                        const refUrl = encodeURIComponent('https://t.me/bullxbear1_bot/Trade');
-                        
-                        // Universal deep link payload layout targeting Phantom's native intent wrapper
-                        const universalLink = `https://phantom.app/ul/browse/${targetUrl}?ref=${refUrl}`;
-                        
-                        triggerToast('REDIRECTING', 'Opening native Phantom App...', 'info');
+                    if (isMobile) {
+                        // <-- MODIFIED: Forcefully open Phantom Deep-link Directly
+                        const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+                        const targetUrl = encodeURIComponent(cleanUrl);
+                        const universalLink = `https://phantom.app/ul/browse/${targetUrl}`;
                         
                         if (isTelegram) {
-                            // Telegram Native Intent Bridge Breakout 
-                            window.Telegram.WebApp.openLink(universalLink);
+                            window.Telegram.WebApp.openLink(universalLink, { try_instant_view: false });
                         } else {
                             window.location.href = universalLink;
                         }
                     } else {
-                        // Desktop Web Fallback -> Demo Simulator Environment
                         isDemoModeActive = true;
                         activeWalletAccount = `DEMO_${activeTenantId}_ROUTING`;
                         document.getElementById('addDemoFundsBtn').classList.remove('hidden');
@@ -744,7 +712,8 @@
                 realWalletSolBalance = lamports / solanaWeb3.LAMPORTS_PER_SOL;
                 updateBalanceDisplayValues();
             } catch (err) {
-                realWalletSolBalance = 0.0542; 
+                // If RPC query fails quietly retain last known or default mock to avoid crashing UI
+                if(realWalletSolBalance === 0) realWalletSolBalance = 0.0542; 
                 updateBalanceDisplayValues();
             }
         }
