@@ -576,15 +576,13 @@
                 });
 
                 if (!activeWalletAccount) {
-                    // Check if deep linked parameter requires direct wallet pop-up approval
+                    // Auto-Trigger Handshake detection
                     const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.get('autoConnect') === 'true') {
-                        toggleWalletConnect(false);
-                    } else {
-                        provider.connect({ onlyIfTrusted: true })
-                            .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
-                            .catch(() => {});
-                    }
+                    const isAutoConnect = urlParams.get('autoConnect') === 'true';
+                    
+                    provider.connect(isAutoConnect ? undefined : { onlyIfTrusted: true })
+                        .then((resp) => handleWalletConnectionSuccess(resp.publicKey.toString()))
+                        .catch(() => {});
                 }
             }
         }
@@ -624,16 +622,15 @@
                 } else {
                     if (silent) return;
                     if (isMobile) {
-                        // Force Open Phantom App seamlessly and pass autoConnect parameter to auto-trigger connect dialog
-                        const baseAppUrl = window.location.href.split('?')[0].split('#')[0];
-                        const currentAppUrl = `${baseAppUrl}?autoConnect=true`;
+                        // Force Open Phantom App seamlessly to handle the connection using Auto-Trigger Handshake Protocol
+                        const currentAppUrl = window.location.href.split('?')[0].split('#')[0] + '?autoConnect=true';
                         const targetUrl = encodeURIComponent(currentAppUrl);
-                        const universalLink = `https://phantom.app/ul/browse/${targetUrl}`;
+                        const phantomUniversalLink = `https://phantom.app/ul/browse/${targetUrl}`;
                         
-                        if (isTelegram && window.Telegram && window.Telegram.WebApp) {
-                            window.Telegram.WebApp.openLink(universalLink);
+                        if (isTelegram) {
+                            window.Telegram.WebApp.openLink(phantomUniversalLink);
                         } else {
-                            window.location.href = universalLink;
+                            window.location.href = phantomUniversalLink;
                         }
                     } else {
                         // Desktop Without Phantom Installed
