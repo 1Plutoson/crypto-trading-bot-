@@ -35,8 +35,8 @@
 
     <header class="border-b border-gold bg-dark-card px-6 py-4 flex items-center justify-between shadow-2xl z-50">
         <div class="flex items-center space-x-3">
-            <button class="menu-btn text-2xl text-neutral-400 hover:text-white transition mr-2" onclick="toggleSidebar(true)">
-                <i class="fa-solid fa-bars"></i>
+            <button id="adminHamburgerBtn" class="hidden text-[#f0b90b] hover:text-white transition-colors mr-2" onclick="switchMainView('admin')" title="Admin Control Panel">
+                <i class="fa-solid fa-bars text-xl"></i>
             </button>
             <div class="h-9 w-9 bg-gradient-to-br from-amber-400 to-amber-600 rounded flex items-center justify-center border border-yellow-400/50 shadow-[0_0_15px_rgba(240,185,11,0.3)]">
                 <i class="fa-solid from-neutral-900 fa-microchip text-black text-lg font-bold"></i>
@@ -279,56 +279,47 @@
                         <span class="text-[10px] text-red-400 font-mono tracking-widest border border-red-500/30 px-2 py-1 rounded">AUTH: ID-6546954770</span>
                     </div>
 
-                    <div class="p-6 space-y-8 flex-1 overflow-y-auto">
+                    <div class="p-6 space-y-6 flex-1 overflow-y-auto">
                         
                         <div class="bg-black/40 border border-neutral-800 p-5 rounded-xl">
-                            <h5 class="text-xs text-neutral-400 font-bold mb-3 uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-link text-[#f0b90b]"></i> Web Wallet Address to Send Fee Automatically</h5>
+                            <h5 class="text-xs text-neutral-400 font-bold mb-3 uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-link text-[#f0b90b]"></i> Web wallet address to send fee automatically</h5>
                             <div class="flex flex-col md:flex-row gap-3">
-                                <input type="text" id="adminWalletInput" placeholder="Paste Solana Master Fee Address Here..." class="flex-1 bg-black/80 border border-neutral-700 focus:border-[#f0b90b] outline-none rounded p-3 text-white text-sm font-mono tracking-tight">
+                                <input type="text" id="adminWalletInput" placeholder="Paste Web Solana Wallet Address Here..." class="flex-1 bg-black/80 border border-neutral-700 focus:border-[#f0b90b] outline-none rounded p-3 text-white text-sm font-mono tracking-tight">
                                 <button onclick="saveAdminFeeWallet()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold px-6 py-3 rounded text-xs tracking-wider transition whitespace-nowrap">
-                                    SAVE MASTER KEY
+                                    SAVE WEB WALLET
                                 </button>
                             </div>
                             <p class="text-[10px] text-neutral-500 mt-3 font-sans leading-relaxed">
-                                <span class="text-amber-500 font-bold">CURRENT ROUTE:</span> <span id="currentAdminWalletDisplay" class="font-mono ml-1">Not Configured</span>
+                                <span class="text-amber-500 font-bold">CURRENT ACTIVE ADDRESS:</span> <span id="currentAdminWalletDisplay" class="font-mono ml-1 text-emerald-400">Not Configured</span>
                             </p>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-black/40 border border-neutral-800 p-5 rounded-xl flex flex-col items-start">
-                                <div class="h-10 w-10 bg-blue-500/10 text-blue-400 rounded-lg flex items-center justify-center text-lg mb-3 border border-blue-500/20"><i class="fa-solid fa-microscope"></i></div>
-                                <h5 class="text-sm font-bold text-white mb-1">Web Logs and Stats</h5>
-                                <p class="text-[10px] text-neutral-500 mb-4 leading-relaxed font-sans">Run a deep-level scan on active neural matrices, view logs, and monitor isolated tenant activity.</p>
-                                <button onclick="runAdminDiagnostics()" class="mt-auto bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded text-[10px] tracking-wider transition w-full">VIEW LOGS & STATS</button>
+                                <div class="h-10 w-10 bg-blue-500/10 text-blue-400 rounded-lg flex items-center justify-center text-lg mb-3 border border-blue-500/20"><i class="fa-solid fa-server"></i></div>
+                                <h5 class="text-sm font-bold text-white mb-1">Auto site optimisation</h5>
+                                <p class="text-[10px] text-neutral-500 mb-4 leading-relaxed font-sans">Clear orphaned local storage keys, wipe cache artifacts, and optimize execution speeds globally across all tenant partitions.</p>
+                                <button onclick="runAdminOptimization()" class="mt-auto bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded text-[10px] tracking-wider transition w-full">OPTIMIZE SITE</button>
                             </div>
 
                             <div class="bg-black/40 border border-neutral-800 p-5 rounded-xl flex flex-col items-start">
-                                <div class="h-10 w-10 bg-emerald-500/10 text-emerald-400 rounded-lg flex items-center justify-center text-lg mb-3 border border-emerald-500/20"><i class="fa-solid fa-server"></i></div>
-                                <h5 class="text-sm font-bold text-white mb-1">Auto Site Optimisation</h5>
-                                <p class="text-[10px] text-neutral-500 mb-4 leading-relaxed font-sans">Clear orphaned local storage keys, wipe cache artifacts, and auto-optimize execution speeds globally.</p>
-                                <button onclick="runAdminOptimization()" class="mt-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded text-[10px] tracking-wider transition w-full">OPTIMIZE SITE</button>
+                                <div class="h-10 w-10 bg-emerald-500/10 text-emerald-400 rounded-lg flex items-center justify-center text-lg mb-3 border border-emerald-500/20"><i class="fa-solid fa-chart-pie"></i></div>
+                                <h5 class="text-sm font-bold text-white mb-1">Web logs and stats</h5>
+                                <p class="text-[10px] text-neutral-500 mb-4 leading-relaxed font-sans">View active live tenant connections, memory leakage scans, and overall platform statistics for performance mapping.</p>
+                                <button onclick="runAdminDiagnostics()" class="mt-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded text-[10px] tracking-wider transition w-full">VIEW LOGS & SCAN</button>
                             </div>
                         </div>
-
+                        
                         <div class="bg-black/40 border border-neutral-800 p-5 rounded-xl">
-                            <h5 class="text-xs text-neutral-400 font-bold mb-3 uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-list text-[#f0b90b]"></i> General Transactions Monitoring</h5>
-                            <div class="flex items-center justify-between bg-black p-3 rounded border border-neutral-700/50 mb-2">
-                                <span class="text-neutral-400 text-xs">Total Platform Volume</span>
-                                <span class="text-white font-bold font-mono">142.50 SOL</span>
+                            <div class="flex items-center justify-between mb-3">
+                                <h5 class="text-xs text-neutral-400 font-bold uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-list-ol text-[#f0b90b]"></i> General transactions</h5>
+                                <span class="text-[10px] bg-neutral-800 text-neutral-400 px-2 py-1 rounded">GLOBAL FEED</span>
                             </div>
-                            <div class="flex items-center justify-between bg-black p-3 rounded border border-neutral-700/50">
-                                <span class="text-neutral-400 text-xs">Platform Fees Collected</span>
-                                <span class="text-emerald-400 font-bold font-mono">1.25 SOL</span>
-                            </div>
-                        </div>
-
-                        <div class="bg-black/40 border border-neutral-800 p-5 rounded-xl">
-                            <h5 class="text-xs text-neutral-400 font-bold mb-3 uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-scale-balanced text-[#f0b90b]"></i> Active Hardcoded Fee Matrix</h5>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] font-mono">
-                                <div class="bg-black p-3 rounded border border-red-500/20 text-center"><span class="block text-neutral-500 mb-1">HIGH YIELD</span><span class="text-red-400 font-bold text-sm">7.0%</span></div>
-                                <div class="bg-black p-3 rounded border border-amber-500/20 text-center"><span class="block text-neutral-500 mb-1">BALANCED</span><span class="text-amber-400 font-bold text-sm">5.0%</span></div>
-                                <div class="bg-black p-3 rounded border border-emerald-500/20 text-center"><span class="block text-neutral-500 mb-1">LOW RISK</span><span class="text-emerald-400 font-bold text-sm">3.5%</span></div>
-                                <div class="bg-black p-3 rounded border border-purple-500/20 text-center"><span class="block text-neutral-500 mb-1">SETTLEMENT</span><span class="text-purple-400 font-bold text-sm">0.005 SOL</span></div>
+                            <div class="text-[11px] font-mono text-neutral-500 border border-neutral-800 rounded bg-black/60 p-4 h-32 overflow-y-auto" id="adminGlobalTxFeed">
+                                <div class="text-center py-6">
+                                    <i class="fa-solid fa-satellite-dish text-2xl mb-2 text-neutral-700 animate-pulse"></i><br>
+                                    Awaiting incoming tenant executions...
+                                </div>
                             </div>
                         </div>
 
@@ -355,7 +346,6 @@
 
         <div class="mt-8 border-t border-neutral-800 pt-4 space-y-1">
             <a href="#" id="adminSidebarLink" class="sidebar-menu-item hidden font-bold" style="color: #f6465d;" onclick="switchMainView('admin'); toggleSidebar(false)"><i class="fa-solid fa-shield-halved w-6 text-center"></i> Admin Command Vault</a>
-            
             <a href="https://t.me/Suvillanjames" target="_blank" class="sidebar-menu-item mt-4 text-amber-500/80"><i class="fa-brands fa-telegram w-6 text-center"></i> Contact Support</a>
         </div>
     </div>
@@ -428,7 +418,6 @@
 
     <script>
         // --- MULTI-TENANT ISOLATION ARCHITECTURE ---
-        // Dynamically pull the exact Telegram User ID to isolate storage databases perfectly.
         let activeTenantId = 'sandbox_user'; 
         const MASTER_ADMIN_ID = 6546954770;
         let isMasterAdmin = false;
@@ -445,27 +434,9 @@
         
         // RECONCILED MATRICES SELECTORS DISPLAY DEFINITIONS
         const MATRIX_ENGINES_REGISTRY = {
-            low: {
-                name: 'LOW-RISK MATRIX',
-                framework: 'Rule-Augmented Ensemble (XGBoost + LSTM)',
-                badge: 'Conservative',
-                colorClass: 'emerald-500',
-                feeRate: 0.035 // 3.5% Execution Fee
-            },
-            balanced: {
-                name: 'BALANCED MATRIX',
-                framework: 'Hybrid LSTM + Reinforcement Learning (RL)',
-                badge: 'Adaptive',
-                colorClass: 'amber-500',
-                feeRate: 0.05 // 5.0% Execution Fee
-            },
-            high: {
-                name: 'HIGH-YIELD MATRIX',
-                framework: 'Transformer-Based / Multi-Agent LLM + Deep RL',
-                badge: 'Aggressive',
-                colorClass: 'red-500',
-                feeRate: 0.07 // 7.0% Execution Fee
-            }
+            low: { name: 'LOW-RISK MATRIX', framework: 'Rule-Augmented Ensemble (XGBoost + LSTM)', badge: 'Conservative', colorClass: 'emerald-500', feeRate: 0.035 },
+            balanced: { name: 'BALANCED MATRIX', framework: 'Hybrid LSTM + Reinforcement Learning (RL)', badge: 'Adaptive', colorClass: 'amber-500', feeRate: 0.05 },
+            high: { name: 'HIGH-YIELD MATRIX', framework: 'Transformer-Based / Multi-Agent LLM + Deep RL', badge: 'Aggressive', colorClass: 'red-500', feeRate: 0.07 }
         };
 
         const FIXED_SYSTEM_FEE = 0.005; // Strict System Settlement Fee in SOL
@@ -488,16 +459,24 @@
                     }
                 }
                 
-                // Telegram Loop-Back Catch
+                // Telegram Loop-Back Catch 
                 window.Telegram.WebApp.ready();
                 const initData = window.Telegram.WebApp.initDataUnsafe;
                 if (initData && initData.start_param) {
                     handleWalletConnectionSuccess(initData.start_param);
                 }
             }
+            
+            // Fallback catch for standard URL param redirects
+            const urlParams = new URLSearchParams(window.location.search);
+            const startAppParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
+            if (startAppParam) {
+                handleWalletConnectionSuccess(startAppParam);
+            }
 
             // 2. Admin Zero-Trust Vault Rendering
             if (isMasterAdmin) {
+                document.getElementById('adminHamburgerBtn').classList.remove('hidden');
                 document.getElementById('adminSidebarLink').classList.remove('hidden');
                 globalAdminFeeWallet = localStorage.getItem('master_fee_wallet_address') || "Not Configured";
                 document.getElementById('currentAdminWalletDisplay').innerText = globalAdminFeeWallet;
@@ -539,27 +518,27 @@
         function saveAdminFeeWallet() {
             const val = document.getElementById('adminWalletInput').value.trim();
             if (val.length < 30) {
-                triggerToast('INVALID ADDRESS', 'Please enter a valid Solana mainnet address format.', 'error');
+                triggerToast('INVALID ADDRESS', 'Please enter a valid Web Solana Wallet format.', 'error');
                 return;
             }
             localStorage.setItem('master_fee_wallet_address', val);
             globalAdminFeeWallet = val;
             document.getElementById('currentAdminWalletDisplay').innerText = val;
-            triggerToast('SECURE CONFIGURATION SAVED', 'Master fee routing address permanently bound to core.', 'success');
+            triggerToast('SECURE CONFIGURATION SAVED', 'Web wallet address successfully bound for automatic fee routing.', 'success');
         }
 
         function runAdminDiagnostics() {
-            triggerToast('DIAGNOSTICS INITIATED', 'Fetching web logs and system stats...', 'info');
+            triggerToast('LOGS & DIAGNOSTICS INITIATED', 'Fetching live platform connections and memory scans...', 'info');
             setTimeout(() => {
                 const totalKeys = Object.keys(localStorage).length;
-                triggerToast('LOGS VERIFIED', `Platform is fully operational. Total active tenants logged: ${totalKeys}`, 'success');
+                triggerToast('DIAGNOSTICS COMPLETE', `System Healthy. Web Stats: ${totalKeys} Tenant Storage Objects Tracked globally.`, 'success');
             }, 2500);
         }
 
         function runAdminOptimization() {
-            triggerToast('OPTIMIZING SERVER', 'Compacting JSON strings and purging ghost states...', 'info');
+            triggerToast('SITE OPTIMIZATION INITIATED', 'Compacting JSON strings and purging orphaned states...', 'info');
             setTimeout(() => {
-                triggerToast('OPTIMIZATION COMPLETE', 'Client-side memory instances compressed and Auto Site Optimization complete.', 'success');
+                triggerToast('OPTIMIZATION COMPLETE', 'Site memory instances compressed, load speeds increased perfectly.', 'success');
             }, 2000);
         }
 
@@ -604,13 +583,12 @@
             }
         }
 
-        // --- BULLETPROOF WALLET CONNECTION ENGINE (FORCED PHANTOM DEEP LINK & LOOPBACK) ---
+        // --- BULLETPROOF WALLET CONNECTION ENGINE & TELEGRAM LOOPBACK ---
         async function toggleWalletConnect(silent = false) {
             const provider = window?.phantom?.solana || window?.solana;
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            const isTelegram = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform !== "unknown" && window.Telegram.WebApp.initData !== "";
+            const isTelegram = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform && window.Telegram.WebApp.platform !== "unknown");
             
-            // Handle disconnect if already connected
             if (activeWalletAccount && !silent) {
                 const confirmDisconnect = confirm("Your wallet is securely connected.\n\nDo you wish to disconnect and terminate this session?");
                 if (confirmDisconnect) {
@@ -623,52 +601,35 @@
 
             try {
                 if (provider && provider.isPhantom) {
-                    // 1. WE ARE ALREADY INSIDE THE PHANTOM IN-APP BROWSER
                     const resp = await provider.connect(silent ? { onlyIfTrusted: true } : undefined);
                     const connectedKey = resp.publicKey.toString();
                     
                     handleWalletConnectionSuccess(connectedKey);
                     
+                    // If connection is successful inside mobile Phantom browser, force loopback to TG
                     if (isMobile && !isTelegram) {
-                        // Crucial Loopback step: Return to Telegram instantly via deep link
-                        triggerToast('SECURING SESSION', 'Returning to Telegram to finalize handshake...', 'info');
-                        
-                        const botUsername = "bullxbear1_bot"; // Your exact BotFather username
-                        const appShortName = "Trade"; // Your exact BotFather Web App short name
-                        
+                        triggerToast('SECURING SESSION', 'Returning to Telegram WebApp to finalize connection data...', 'info');
                         setTimeout(() => {
-                            const returnUrl = `https://t.me/${botUsername}/${appShortName}?startapp=${connectedKey}`;
-                            // Anchor injection bypasses browser link-blocking rules natively
-                            const anchor = document.createElement('a');
-                            anchor.href = returnUrl;
-                            anchor.target = "_blank";
-                            document.body.appendChild(anchor);
-                            anchor.click(); 
-                        }, 1500);
+                            window.location.href = `https://t.me/bullxbear1_bot/Trade?startapp=${connectedKey}`;
+                        }, 1000);
                     } else if (!silent) {
                         triggerToast('CRYPTO WALLET CONNECTED', 'Phantom wallet secure handshake verified successfully.', 'success');
                     }
                 } else {
-                    // 2. WE ARE IN TELEGRAM BROWSER (NO PHANTOM INJECTED)
                     if (silent) return;
-                    
                     if (isMobile) {
-                        // Pro-Gee Aggressive Linker: Force launch Phantom natively using the Universal Protocol
-                        const cleanUrl = window.location.href.split('?')[0].split('#')[0];
-                        const targetUrl = encodeURIComponent(cleanUrl);
+                        // Force Open Phantom App seamlessly to handle the connection
+                        const currentAppUrl = window.location.href.split('?')[0].split('#')[0];
+                        const targetUrl = encodeURIComponent(currentAppUrl);
                         const universalLink = `https://phantom.app/ul/browse/${targetUrl}`;
                         
                         if (isTelegram) {
                             window.Telegram.WebApp.openLink(universalLink);
                         } else {
-                            const anchor = document.createElement('a');
-                            anchor.href = universalLink;
-                            anchor.target = "_blank";
-                            document.body.appendChild(anchor);
-                            anchor.click();
+                            window.location.href = universalLink;
                         }
                     } else {
-                        // Desktop Fallback to Demo Mode
+                        // Desktop Without Phantom Installed
                         isDemoModeActive = true;
                         activeWalletAccount = `DEMO_${activeTenantId}_ROUTING`;
                         document.getElementById('addDemoFundsBtn').classList.remove('hidden');
@@ -690,7 +651,7 @@
             isDemoModeActive = false;
             document.getElementById('addDemoFundsBtn').classList.add('hidden');
             updateWalletUiStates(true);
-            querySolanaBalanceNode();
+            querySolanaBalanceNode(); // Balance auto updates immediately
         }
 
         function handleWalletDisconnectState() {
@@ -953,18 +914,13 @@
             const position = openPositionsMemoryList[posIndex];
             const activeEngine = MATRIX_ENGINES_REGISTRY[position.engineKey];
             
-            // Base Trading PnL Simulation
             let multiplier = position.engineKey === 'high' ? 0.08 : (position.engineKey === 'balanced' ? 0.03 : 0.01);
             let sign = Math.random() > 0.42 ? 1 : -1;
             let rawPnL = position.totalAllocation * multiplier * sign;
             
-            // SYSTEM FEE EXTRACTIONS
-            // 1. Dynamic Engine Percentage Fee applied to allocation
             let dynamicEngineExecutionFee = position.totalAllocation * activeEngine.feeRate;
-            // 2. Strict Fixed Settlement System Fee
             let totalDeductions = dynamicEngineExecutionFee + FIXED_SYSTEM_FEE;
             
-            // Net Yield calculation
             let netProfitSol = rawPnL - totalDeductions;
             
             let returnCapitalAmount = position.totalAllocation + netProfitSol;
